@@ -1,6 +1,7 @@
 {
   "server": {
-    "port": 80
+    "port": 80,
+    "blobCache": true
   },
   "router": {
     "fileRoot": "./test/webRoot",

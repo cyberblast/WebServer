@@ -1,12 +1,15 @@
 const fs = require("fs");
 const url = require('url');
 const path = require('path');
+const BlobLoader = require('./BlobLoader');
 
 module.exports = class Router {
   constructor(settings){
+    this.loader = new BlobLoader();
     this.routes = settings.router.routes;
     this.fileRoot = settings.router.fileRoot || '';
     this.apiRoot = settings.router.apiRoot || '';
+    this.blobCache = settings.server.blobCache || false;
     const qualifyRoute = route => {
       if(route.path.indexOf('*') > -1){
         // its a catch all route
@@ -40,7 +43,8 @@ module.exports = class Router {
     if(route.handler === 'file'){
       const path = this.fileRoot + route.content;
       console.log(`loading file "${path}"`);
-      this.navigateFile(server, request, response, path);
+      const useBlobCache = route.blobCache === true || this.blobCache;
+      this.navigateFile(server, request, response, path, useBlobCache);
     } else if(route.handler === 'module'){
       const mod = this.apiRoot + '/' + route.module;
       console.log(`loading module "${mod}" to run "${route.function}"`);
@@ -91,13 +95,14 @@ module.exports = class Router {
     if(route !== undefined) return Object.assign({}, route, tokens);
   }
 
-  navigateFile(server, request, response, path){
+  navigateFile(server, request, response, path, useBlobCache){
     if(path == null){
       response.writeHead(404, {'Content-Type': 'text/html'});
       response.end();
       return;
     }
-    fs.readFile(path, function (err, data) {
+
+    const onLoaded = function (err, data) {
       if (err) {
         console.log(err);
         response.writeHead(404, {'Content-Type': 'text/html'});
@@ -110,7 +115,8 @@ module.exports = class Router {
         response.write(data);
       }
       response.end();
-    });
+    };
+    this.loader.get(path, onLoaded, useBlobCache);
   }
 
   navigateModule(server, request, response, modPath, func){
