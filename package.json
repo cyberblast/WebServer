@@ -5,7 +5,8 @@
   "main": "./src/server.js",
   "scripts": {
     "test": "node test/testrun.js",
-    "testold": "echo \"Error: no test specified\" && exit 1"
+    "version-patch": "npm version patch -m \"version patch increment\"",
+    "publish-npm": "npm publish --access public"
   },
   "repository": {
     "type": "git",
@@ -26,5 +27,8 @@
   },
   "dependencies": {},
   "devDependencies": {},
-  "optionalDependencies": {}
+  "optionalDependencies": {},
+  "directories": {
+    "test": "test"
+  }
 }

@@ -2,7 +2,8 @@
 
 A minimal node-based web server
 
-[Repository](https://github.com/cyberblast/WebServer)
+[repository](https://github.com/cyberblast/WebServer)  
+[npm package](https://www.npmjs.com/package/@cyberblast/webserver)
 
 ## Features
 
