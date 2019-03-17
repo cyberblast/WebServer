@@ -7,6 +7,7 @@ function loadFile(path, complete, error){
   fs.readFile(path, function (fsE, data) {
     if (fsE) { 
       // TODO: Log hint to create config file
+      // TODO: load default settings
       error(fsE);
       return;
     }
