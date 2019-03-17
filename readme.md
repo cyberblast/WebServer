@@ -7,16 +7,16 @@ A minimal node-based web server
 
 ## Features
 
-* GET static files
+* GET static files  
   like html markup, stylesheets, images etc...
-* GET dynamic content from static js functions
+* GET dynamic content from static js functions  
   Call any static function in any module. 
-* POST to static js functions
+* POST to static js functions  
   **NOT YET**
-* Define access routes
+* Define access routes  
   Allows to map request urls to local paths, for static files and function calls alike.
 
-## Installation 
+## Installation
 
 `npm i @cyberblast/webserver`
 
@@ -63,7 +63,7 @@ Sample webserver.json file
 * router.fileRoot: A base path for ALL file routes (optional)
 * router.apiRoot: A base path for ALL js files, callable as api function (optional)
 * router.routes: List of route rules. First path match will get executed (top to bottom).
-* router.routes[x].path: URL path. Filehandler rules may contain an asterisk (*) at the end to specify catch all rules. Modulehandler rules may define token placeholders for module (:module) and function (:function). 
+* router.routes[x].path: URL path. Request url path must match to activate route rule. Filehandler rules may contain an asterisk (*) at the end to specify catch all rules. Modulehandler rules may define token placeholders for module (:module) and function (:function). 
 * router.routes[x].handler: "file" or "module". 
   * file: A rule to access static file content
   * module A rule to access a js function
