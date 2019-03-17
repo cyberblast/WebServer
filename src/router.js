@@ -118,7 +118,8 @@ module.exports = class Router {
     try{
       const mod = require(normalized);
       if(mod !== undefined && mod[func] !== undefined){
-        mod[func](server, request, response);
+        const content = mod[func](server, request, response);
+        if(content != null) response.write(content);
       }
     } catch(e){
       // TODO: Handle e
