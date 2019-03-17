@@ -1,6 +1,6 @@
 {
   "name": "@cyberblast/webserver",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A minimal node-based web server",
   "main": "./src/server.js",
   "scripts": {
