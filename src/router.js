@@ -3,22 +3,9 @@ const url = require('url');
 const path = require('path');
 
 module.exports = class Router {
-  #fileRoot;
-  #routes;
-
-  constructor(configFile = './src/router.json'){
-    const self = this;
-    self.#routes = global.config.router.routes;
-    self.#fileRoot = global.config.router.fileRoot || '';
-    
-    fs.readFile(configFile, function (err, data) {
-      if (err) {
-          console.log(err.stack);
-          return;
-      }
-      // console.log(data.toString());
-      const config = JSON.parse(data.toString());
-    });
+  constructor(settings){
+    this.routes = settings.router.routes;
+    this.fileRoot = settings.router.fileRoot || '';
   }
 
   navigate(server, request, response){
@@ -27,11 +14,11 @@ module.exports = class Router {
     console.log(`Request for "${pathname}" received from ${client}`);
 
     const byPath = route => route.path === pathname;
-    let route = this.#routes.find(byPath);
+    let route = this.routes.find(byPath);
 
     if(route === undefined){
       const byDefault = route => route.path === '*';
-      const defaultRoute = this.#routes.find(byDefault);
+      const defaultRoute = this.routes.find(byDefault);
       if( defaultRoute === undefined ){
         response.writeHead(404, {'Content-Type': 'text/html'});
         response.end();
@@ -43,7 +30,7 @@ module.exports = class Router {
     }
 
     if(route.handler === 'file'){
-      const path = this.#fileRoot + route.content;
+      const path = this.fileRoot + route.content;
       this.navigateFile(server, request, response, path);
     } else if(route.handler === 'module'){
       this.navigateModule(server, request, response, route.module, route.function);

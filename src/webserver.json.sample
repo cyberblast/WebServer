@@ -1,0 +1,15 @@
+{
+  "server": {
+    "port": 80
+  },
+  "router": {
+    "fileRoot": "src/client/",
+    "routes": [
+      { "path": "/", "handler": "file", "content": "index.html" },
+      { "path": "*", "handler": "file" },
+      { "path": "/api/server/shutdown", "handler": "module", "module": "./src/server/api/server.js", "function": "stop" },
+      { "path": "/api/server/version", "handler": "module", "module": "./src/server/api/server.js", "function": "version" },
+      { "path": "/api/server/ip", "handler": "module", "module": "./src/server/api/server.js", "function": "ip" }
+    ]
+  }
+}

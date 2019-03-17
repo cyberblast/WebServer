@@ -1,29 +1,40 @@
-var http = require('http');
-var Router = require('./router.js');
+let mod = {};
+module.exports = mod;
 
-module.exports = class GameServer{
-  #server;
-  #game;
-  #router;
-  constructor(){
-    const self = this;
-    this.#router = new Router();
-    this.#server = http.createServer(function(request, response){
-      self.process(request, response);
+const http = require('http');
+const config = require('./config.js');
+const Router = require('./router.js');
+
+let router;
+let server;
+
+function process(request, response){
+  router.navigate(this, request, response);
+}
+
+/**Start web server. 
+ * configFile: specify a custom path to a config file
+ * forceReload: reload settings file every time you call start.
+ */
+mod.start = function(configFile = 'webserver.json', forceReload = false){
+  config.load(settings => {
+    router = new Router(settings);
+    server = http.createServer(function(request, response){
+      process(request, response);
     });
-  }
+    server.listen(settings.server.port);
+    console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
+  }, configFile, forceReload);
+}
 
-  start(port){
-    this.#server.listen(port);
-    console.log(`Server running at http://127.0.0.1:${port}/`);
-  }
-  stop(){
-    this.#server.removeAllListeners()
-    console.log('Server stopped!');
+/**Stop web server. 
+ * abortProcess: Also abort Node process
+ */
+mod.stop = function(abortProcess = false){
+  server.removeAllListeners()
+  console.log('Web server stopped!');
+  if(abortProcess) {
+    console.log('Aborting Node Process...');
     process.abort();
-  }
-
-  process(request, response){
-    this.#router.navigate(this, request, response);
   }
 }

@@ -1,0 +1,30 @@
+{
+  "name": "@cyberblast/webserver",
+  "version": "0.0.1",
+  "description": "A minimal node-based web server",
+  "main": "./src/server.js",
+  "scripts": {
+    "test": "node test/testrun.js",
+    "testold": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyberblast/WebServer.git"
+  },
+  "keywords": [
+    "node",
+    "webserver"
+  ],
+  "author": "cyberblast",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cyberblast/WebServer/issues"
+  },
+  "homepage": "https://github.com/cyberblast/WebServer#readme",
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "optionalDependencies": {}
+}
