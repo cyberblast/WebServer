@@ -11,7 +11,7 @@
       { "path": "/api/server/ip", "handler": "module", "module": "server.js", "function": "ip" },
       { "path": "/api/:module/:function", "handler": "module"},
       { "path": "/other/*", "handler": "file", "content": "/subFolder/*" },
-      { "path": "*", "handler": "file"}
+      { "path": "*", "handler": "file", "blobCache": false}
     ]
   }
 }
