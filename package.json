@@ -1,11 +1,12 @@
 {
   "name": "@cyberblast/webserver",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "A minimal node-based web server",
   "main": "./src/server.js",
   "scripts": {
     "test": "node test/testrun.js",
-    "testold": "echo \"Error: no test specified\" && exit 1"
+    "version-patch": "npm version patch -m \"version patch increment\"",
+    "publish-npm": "npm publish --access public"
   },
   "repository": {
     "type": "git",
@@ -15,7 +16,7 @@
     "node",
     "webserver"
   ],
-  "author": "cyberblast",
+  "author": "cyberblast <git@cyberblast.org>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/cyberblast/WebServer/issues"
@@ -26,5 +27,8 @@
   },
   "dependencies": {},
   "devDependencies": {},
-  "optionalDependencies": {}
+  "optionalDependencies": {},
+  "directories": {
+    "test": "test"
+  }
 }
