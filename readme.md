@@ -15,6 +15,8 @@ A minimal node-based web server
   **NOT YET**
 * Define access routes  
   Allows to map request urls to local paths, for static files and function calls alike.
+* Simplest blob cache
+  Keep once loaded files in memory.
 
 ## Installation
 
@@ -61,8 +63,7 @@ Sample webserver.json file
 }
 ```
 * server.port: Port for the webserver to listen at
-* server.blobCache: Activate blob caching for all file routes (may be overridden on a per route base).  
-  NOT FUNCTIONAL YET
+* server.blobCache: Activate blob caching for all file routes (may be overridden on a per route base).
 * router.fileRoot: A base path for ALL file routes (optional)
 * router.apiRoot: A base path for ALL js files, callable as api function (optional)
 * router.routes: List of route rules. First path match will get executed (top to bottom).
@@ -71,8 +72,7 @@ Sample webserver.json file
   * file: A rule to access static file content
   * module A rule to access a js function
 * router.routes[x].content: Valid for filehandler rules only. Specify a specific file (or path for catch all rules) to load.
-* router.routes[x].blobCache: Valid for filehandler rules only. Activate blob caching for all files loaded by this route rule.  
-  NOT FUNCTIONAL YET
+* router.routes[x].blobCache: Valid for filehandler rules only. Activate blob caching for all files loaded by this route rule.
 * router.routes[x].module: Valid for modulehandler rules only. Specify js file to load as module. 
 * router.routes[x].function: Valid for modulehandler rules only. Specify name of static function to call.
 
