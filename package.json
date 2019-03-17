@@ -15,7 +15,7 @@
     "node",
     "webserver"
   ],
-  "author": "cyberblast",
+  "author": "cyberblast <git@cyberblast.org>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/cyberblast/WebServer/issues"
