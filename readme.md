@@ -15,7 +15,7 @@ A minimal node-based web server
   **NOT YET**
 * Define access routes  
   Allows to map request urls to local paths, for static files and function calls alike.
-* Simplest blob cache
+* Simplest blob cache  
   Keep once loaded files in memory.
 
 ## Installation
