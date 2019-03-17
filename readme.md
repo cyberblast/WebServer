@@ -39,3 +39,7 @@ _TODO_
 
 First, before deciding to contribute to this repository please read and accept LICENSE.txt & CONTRIBUTING.txt.  
 Any contribution requires and assumes full consent.
+
+## Legal implications
+
+This is an experimental piece of code. This is NOT a production ready web server. Use on your own risk.
