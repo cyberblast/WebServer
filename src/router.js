@@ -52,8 +52,7 @@ module.exports = class Router {
     let tokens = {};
     const match = {
       catchall: route => { 
-        if( route.path === '*' ) return true;
-        let isMatch = path.startsWith(route.startsWith);
+        let isMatch = ( route.path === '*' || path.startsWith(route.startsWith))
         if(isMatch) {
           if(route.content !== undefined){
             if(route.content.indexOf('*') > -1){
@@ -116,7 +115,14 @@ module.exports = class Router {
 
   navigateModule(server, request, response, modPath, func){
     const normalized = path.resolve(modPath);
-    const mod = require(normalized);
-    mod[func](server, request, response);
+    try{
+      const mod = require(normalized);
+      if(mod !== undefined && mod[func] !== undefined){
+        mod[func](server, request, response);
+      }
+    } catch(e){
+      // TODO: Handle e
+    }
+    response.end();
   }
 }
