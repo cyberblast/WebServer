@@ -6,6 +6,22 @@ module.exports = class Router {
   constructor(settings){
     this.routes = settings.router.routes;
     this.fileRoot = settings.router.fileRoot || '';
+    this.apiRoot = settings.router.apiRoot || '';
+    const qualifyRoute = route => {
+      if(route.path.indexOf('*') > -1){
+        // its a catch all route
+        route.match = 'catchall';
+        route.startsWith = route.path.replace('*','');
+      } else if(route.path.indexOf(':') > -1){
+        // its a replacement route
+        route.match = 'replace';
+        route.parts = route.path.split('/');
+      } else {
+        route.match = 'exact';
+      }
+    };
+    this.routes.forEach(qualifyRoute);
+    
   }
 
   navigate(server, request, response){
@@ -13,28 +29,67 @@ module.exports = class Router {
     const client = request.socket.remoteAddress.split(':').pop();
     console.log(`Request for "${pathname}" received from ${client}`);
 
-    const byPath = route => route.path === pathname;
-    let route = this.routes.find(byPath);
+    let route = this.selectRoute(pathname);
 
-    if(route === undefined){
-      const byDefault = route => route.path === '*';
-      const defaultRoute = this.routes.find(byDefault);
-      if( defaultRoute === undefined ){
-        response.writeHead(404, {'Content-Type': 'text/html'});
-        response.end();
-        return;
-      }
-      // TODO: better/faster cloning
-      route = JSON.parse(JSON.stringify(defaultRoute));
-      route.content = route.content ? route.content + pathname.substr(1) : pathname.substr(1);
+    if(route === undefined){      
+      response.writeHead(404, {'Content-Type': 'text/html'});
+      response.end();
+      return;
     }
 
     if(route.handler === 'file'){
       const path = this.fileRoot + route.content;
+      console.log(`loading file "${path}"`);
       this.navigateFile(server, request, response, path);
     } else if(route.handler === 'module'){
-      this.navigateModule(server, request, response, route.module, route.function);
+      const mod = this.apiRoot + '/' + route.module;
+      console.log(`loading module "${mod}" to run "${route.function}"`);
+      this.navigateModule(server, request, response, mod, route.function);
     }
+  }
+
+  selectRoute(path){
+    let tokens = {};
+    const match = {
+      catchall: route => { 
+        if( route.path === '*' ) return true;
+        let isMatch = path.startsWith(route.startsWith);
+        if(isMatch) {
+          if(route.content !== undefined){
+            if(route.content.indexOf('*') > -1){
+              tokens.content = route.content.replace('*', path.substr(route.startsWith.length));
+            } else {
+              tokens.content = route.content;
+            }
+          } else {
+            tokens.content = path;
+          }
+        }
+        return isMatch;
+      },
+      replace: route => {
+        const pathParts = path.split('/');
+        if(pathParts.length !== route.parts.length) return false;
+        tokens = {};
+        let isMatch = true;
+        route.parts.forEach((routePart, index) => {
+          if(routePart.startsWith(':')){
+            tokens[routePart.substr(1)] = pathParts[index];
+          } else {
+            if(routePart !== pathParts[index]){
+              isMatch = false;
+            }
+          }
+        });
+        return isMatch;
+      },
+      exact: route => { return route.path === path; }
+    }
+    const matchSelector = route => {
+      return match[route.match] === undefined ? false : match[route.match](route);
+    }
+    let route = this.routes.find(matchSelector);
+    if(route !== undefined) return Object.assign({}, route, tokens);
   }
 
   navigateFile(server, request, response, path){
@@ -60,10 +115,8 @@ module.exports = class Router {
   }
 
   navigateModule(server, request, response, modPath, func){
-    console.log(`loading module at '${modPath}'`);
     const normalized = path.resolve(modPath);
     const mod = require(normalized);
     mod[func](server, request, response);
   }
-
 }

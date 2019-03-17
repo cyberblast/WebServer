@@ -3,13 +3,13 @@
     "port": 80
   },
   "router": {
-    "fileRoot": "test/webRoot/",
+    "fileRoot": "./test/webRoot",
+    "apiRoot": "./test/api",
     "routes": [
-      { "path": "/", "handler": "file", "content": "index.html" },
-      { "path": "*", "handler": "file" },
-      { "path": "/api/server/shutdown", "handler": "module", "module": "./src/server/api/server.js", "function": "stop" },
-      { "path": "/api/server/version", "handler": "module", "module": "./src/server/api/server.js", "function": "version" },
-      { "path": "/api/server/ip", "handler": "module", "module": "./src/server/api/server.js", "function": "ip" }
+      { "path": "/", "handler": "file", "content": "/index.html" },
+      { "path": "/api/server/ip", "handler": "module", "module": "server.js", "function": "ip" },
+      { "path": "/api/:module/:function", "handler": "module"},
+      { "path": "/other/*", "handler": "file", "content": "/subFolder/*" }
     ]
   }
 }
