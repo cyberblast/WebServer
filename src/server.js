@@ -38,7 +38,7 @@ function boot(settings){
 }
 
 function process(request, response){
-  router.navigate(this, request, response);
+  router.navigate(mod, request, response);
 }
 
 /**  
