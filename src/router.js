@@ -1,4 +1,3 @@
-const fs = require("fs");
 const url = require('url');
 const path = require('path');
 const BlobLoader = require('./blobLoader');
@@ -121,12 +120,30 @@ module.exports = class Router {
     try{
       const mod = require(normalized);
       if(mod !== undefined && mod[func] !== undefined){
-        const content = mod[func](server, request, response);
-        if(content != null) response.write(content);
+        if (request.method == 'POST') {
+          let rawData = '';
+          request.on('data', chunk => {
+            rawData += chunk;
+              // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
+              if (rawData.length > 1e6) { 
+                  // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
+                  request.connection.destroy();
+              }
+          });
+          request.on('end', function () {  
+            const content = mod[func](server, request, response, rawData);
+            if(content != null) response.write(content);
+            response.end();  
+          });
+        } else {
+          const content = mod[func](server, request, response);
+          if(content != null) response.write(content);
+          response.end();
+        }
       }
     } catch(e){
       // TODO: Handle e
+      response.end();
     }
-    response.end();
   }
 }
