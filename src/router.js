@@ -1,10 +1,12 @@
 const url = require('url');
 const path = require('path');
+const events = require('events');
 const BlobLoader = require('./blobLoader');
 const contentType = require('./contentType');
 
 module.exports = class Router {
   constructor(settings){
+    this.event = new events.EventEmitter();
     this.loader = new BlobLoader();
     this.routes = settings.router.routes;
     this.fileRoot = settings.router.fileRoot || '';
@@ -23,8 +25,11 @@ module.exports = class Router {
         route.match = 'exact';
       }
     };
-    this.routes.forEach(qualifyRoute);
-    
+    this.routes.forEach(qualifyRoute);    
+  }
+
+  onError(callback){
+    this.event.on('error', callback);
   }
 
   navigate(server, request, response){
@@ -142,7 +147,7 @@ module.exports = class Router {
         }
       }
     } catch(e){
-      // TODO: Handle e
+      this.event.emit('error', e);
       response.end();
     }
   }

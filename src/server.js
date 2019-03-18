@@ -7,9 +7,47 @@ const Router = require('./router.js');
 
 let router;
 let server;
+let errorCallback;
+
+function handleError(error){
+  if(errorCallback != null){
+    errorCallback(error);
+  }
+}
+
+function boot(settings){
+  // Create Router
+  try{
+    router = new Router(settings);
+  }
+  catch(e){
+    handleError(e);
+  }
+  router.onError(handleError);
+
+  // Create Server
+  try{
+    server = http.createServer(function(request, response){
+      process(request, response);
+    });
+    server.listen(settings.server.port);
+    console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
+  } catch(e){
+    handleError(e);
+  }
+}
 
 function process(request, response){
   router.navigate(this, request, response);
+}
+
+/**  
+ * Register an error handler.  
+ * Use like that: `server.onError(err => { console.log(err); })`
+ * @param {function({error: (string|error)}): void} callback - Function to call on error
+ */
+mod.onError = function(callback){
+  errorCallback = callback;
 }
 
 /**Start web server. 
@@ -17,14 +55,11 @@ function process(request, response){
  * forceReload: reload settings file every time you call start.
  */
 mod.start = function(configFile = 'webserver.json', forceReload = false){
-  config.load(settings => {
-    router = new Router(settings);
-    server = http.createServer(function(request, response){
-      process(request, response);
-    });
-    server.listen(settings.server.port);
-    console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
-  }, configFile, forceReload);
+  config.load(
+    handleError, 
+    boot, 
+    configFile, 
+    forceReload);
 }
 
 /**Stop web server. 
