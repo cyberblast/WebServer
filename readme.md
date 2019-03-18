@@ -12,7 +12,7 @@ A minimal node-based web server
 * GET dynamic content from static js functions  
   Call any static function in any module. 
 * POST to static js functions  
-  **NOT YET**
+  Just like GET but with payload...
 * Define access routes  
   Allows to map request urls to local paths, for static files and function calls alike.
 * Simplest blob cache  
@@ -24,13 +24,20 @@ A minimal node-based web server
 
 ## Usage
 
-Start server
-```
+Create server
+```js
 const server = require('@cyberblast/webserver');
+```
+Attach error handler
+```js
+server.onError(err => { console.log(err); });
+```
+Start server
+```js
 server.start();
 ```
 Stop server
-```
+```js
 server.stop();
 ```
 
