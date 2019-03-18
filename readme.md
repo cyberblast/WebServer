@@ -70,7 +70,7 @@ Sample webserver.json file
 * router.routes[x].path: URL path. Request url path must match to activate route rule. Filehandler rules may contain an asterisk (*) at the end to specify catch all rules. Modulehandler rules may define token placeholders for module (:module) and function (:function). 
 * router.routes[x].handler: "file" or "module". 
   * file: A rule to access static file content
-  * module A rule to access a js function
+  * module: A rule to access a js function
 * router.routes[x].content: Valid for filehandler rules only. Specify a specific file (or path for catch all rules) to load.
 * router.routes[x].blobCache: Valid for filehandler rules only. Activate blob caching for all files loaded by this route rule.
 * router.routes[x].module: Valid for modulehandler rules only. Specify js file to load as module. 

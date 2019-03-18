@@ -1,7 +1,8 @@
 const fs = require("fs");
 const url = require('url');
 const path = require('path');
-const BlobLoader = require('./BlobLoader');
+const BlobLoader = require('./blobLoader');
+const contentType = require('./contentType');
 
 module.exports = class Router {
   constructor(settings){
@@ -107,11 +108,7 @@ module.exports = class Router {
         console.log(err);
         response.writeHead(404, {'Content-Type': 'text/html'});
       } else {
-        if( path.endsWith('.html') )
-          response.writeHead(200, {'Content-Type': 'text/html'});	
-        else response.writeHead(200);	
-        // TODO: Set correct Content Type {'Content-Type': 'text/html'}
-        // or Binary (favicon) or whatever...
+        response.writeHead(200, {'Content-Type': contentType.get(path)});
         response.write(data);
       }
       response.end();
