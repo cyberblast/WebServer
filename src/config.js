@@ -22,7 +22,7 @@ function loadFile(path, complete, error){
   });
 };
 
-mod.load = function(callback, config = 'webserver.json', forceReload = false){
+mod.load = function(onError, onSuccess, config = 'webserver.json', forceReload = false){
   if(forceReload && mod.settings !== undefined){
     delete mod.settings;
   }
@@ -30,12 +30,10 @@ mod.load = function(callback, config = 'webserver.json', forceReload = false){
     loadFile(config, file => {
       //Object.assign(mod, file);
       mod.settings = file;
-      callback(file);
+      onSuccess(file);
     }, 
-    error => {
-      console.log(error);
-    });
+    onError);
   } else {
-    callback(mod.settings);
+    onSuccess(mod.settings);
   }
 };

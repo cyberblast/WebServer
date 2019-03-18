@@ -1,10 +1,12 @@
-const fs = require("fs");
 const url = require('url');
 const path = require('path');
-const BlobLoader = require('./BlobLoader');
+const events = require('events');
+const BlobLoader = require('./blobLoader');
+const contentType = require('./contentType');
 
 module.exports = class Router {
   constructor(settings){
+    this.event = new events.EventEmitter();
     this.loader = new BlobLoader();
     this.routes = settings.router.routes;
     this.fileRoot = settings.router.fileRoot || '';
@@ -23,8 +25,11 @@ module.exports = class Router {
         route.match = 'exact';
       }
     };
-    this.routes.forEach(qualifyRoute);
-    
+    this.routes.forEach(qualifyRoute);    
+  }
+
+  onError(callback){
+    this.event.on('error', callback);
   }
 
   navigate(server, request, response){
@@ -107,11 +112,7 @@ module.exports = class Router {
         console.log(err);
         response.writeHead(404, {'Content-Type': 'text/html'});
       } else {
-        if( path.endsWith('.html') )
-          response.writeHead(200, {'Content-Type': 'text/html'});	
-        else response.writeHead(200);	
-        // TODO: Set correct Content Type {'Content-Type': 'text/html'}
-        // or Binary (favicon) or whatever...
+        response.writeHead(200, {'Content-Type': contentType.get(path)});
         response.write(data);
       }
       response.end();
@@ -124,12 +125,30 @@ module.exports = class Router {
     try{
       const mod = require(normalized);
       if(mod !== undefined && mod[func] !== undefined){
-        const content = mod[func](server, request, response);
-        if(content != null) response.write(content);
+        if (request.method == 'POST') {
+          let rawData = '';
+          request.on('data', chunk => {
+            rawData += chunk;
+              // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
+              if (rawData.length > 1e6) { 
+                  // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
+                  request.connection.destroy();
+              }
+          });
+          request.on('end', function () {  
+            const content = mod[func](server, request, response, rawData);
+            if(content != null) response.write(content);
+            response.end();  
+          });
+        } else {
+          const content = mod[func](server, request, response);
+          if(content != null) response.write(content);
+          response.end();
+        }
       }
     } catch(e){
-      // TODO: Handle e
+      this.event.emit('error', e);
+      response.end();
     }
-    response.end();
   }
 }
