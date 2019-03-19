@@ -9,10 +9,10 @@ A minimal node-based web server
 
 * GET static files  
   like html markup, stylesheets, images etc...
-* GET dynamic content from static js functions  
+* GET content from js functions  
   Call any static function in any module. 
-* POST to static js functions  
-  Just like GET but with payload...
+* POST to js functions  
+  Just like GET but with added payload...
 * Define access routes  
   Allows to map request urls to local paths, for static files and function calls alike.
 * Simplest blob cache  
