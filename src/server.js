@@ -4,7 +4,7 @@ module.exports = mod;
 const http = require('http');
 const config = require('./config');
 const Router = require('./router');
-const errorPage = '<html><body><div style="height: 80%;display: flex;align-items: center;justify-content: center"><div style="max-width:600px;"><h1 style="font: 40px sans-serif;">STATUS</h1><span style="font: 14px consolas;">ERROR</span></div></div></body</html>';
+const errorPage = '<html><body><div style="height: 80%;display: flex;align-items: center;justify-content: center"><div style="max-width:600px;"><h1 style="font: 40px sans-serif;">STATUS</h1><span style="font: 14px consolas;">ERROR</span><div><span style="font: 14px consolas;"><a href="/">Back to the roots</a></span></div></div></div></body</html>';
 
 let router;
 let server;
