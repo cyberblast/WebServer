@@ -27,8 +27,5 @@
   },
   "dependencies": {},
   "devDependencies": {},
-  "optionalDependencies": {},
-  "directories": {
-    "test": "test"
-  }
+  "optionalDependencies": {}
 }
