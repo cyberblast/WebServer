@@ -2,8 +2,8 @@ let mod = {};
 module.exports = mod;
 
 const http = require('http');
-const config = require('./config.js');
-const Router = require('./router.js');
+const config = require('./config');
+const Router = require('./router');
 
 let router;
 let server;
@@ -22,6 +22,7 @@ function boot(settings){
   }
   catch(e){
     handleError(e);
+    return;
   }
   router.onError(handleError);
 
@@ -34,6 +35,8 @@ function boot(settings){
     console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
   } catch(e){
     handleError(e);
+    router = null;
+    server = null;
   }
 }
 
@@ -50,9 +53,12 @@ mod.onError = function(callback){
   errorCallback = callback;
 }
 
-/**Start web server. 
- * configFile: specify a custom path to a config file
- * forceReload: reload settings file every time you call start.
+/**
+ * Start web server. 
+ * @param {string} [configFile] - specify a custom path to a config file.  
+ * default: 'webserver.json'
+ * @param {boolean} [forceReload] - reload settings file every time you call start.  
+ * default: false
  */
 mod.start = function(configFile = 'webserver.json', forceReload = false){
   config.load(
@@ -62,8 +68,9 @@ mod.start = function(configFile = 'webserver.json', forceReload = false){
     forceReload);
 }
 
-/**Stop web server. 
- * abortProcess: Also abort Node process
+/**
+ * Stop web server. 
+ * @param {boolean} [abortProcess] - Also abort Node process
  */
 mod.stop = function(abortProcess = false){
   server.removeAllListeners()
