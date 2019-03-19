@@ -36,6 +36,10 @@ Start server
 ```js
 server.start();
 ```
+Respond with a standardized error page
+```js
+server.respondError(error, response, 500, 'Something went wrong! Hurt your IT admin...');
+```
 Stop server
 ```js
 server.stop();
