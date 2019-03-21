@@ -3,6 +3,7 @@ module.exports = mod;
 
 const http = require('http');
 const config = require('./config');
+const RequestContext = require('./context');
 const Router = require('./router');
 const errorPage = '<html><body><div style="height: 80%;display: flex;align-items: center;justify-content: center"><div style="max-width:600px;"><h1 style="font: 40px sans-serif;">STATUS</h1><span style="font: 14px consolas;">ERROR</span><div><span style="font: 14px consolas;"><a href="/">Back to the roots</a></span></div></div></div></body</html>';
 
@@ -30,7 +31,7 @@ function respondError(error, response, code, message){
   }
 }
 
-function boot(settings){
+function startServer(settings){
   // Create Router
   try{
     router = new Router(settings);
@@ -43,9 +44,7 @@ function boot(settings){
 
   // Create Server
   try{
-    server = http.createServer(function(request, response){
-      process(request, response);
-    });
+    server = http.createServer(process);
     server.listen(settings.server.port);
     console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
   } catch(e){
@@ -56,7 +55,10 @@ function boot(settings){
 }
 
 function process(request, response){
-  router.navigate(mod, request, response);
+  const context = new RequestContext(mod);
+  context.request = request;
+  context.response = response;
+  router.navigate(context);
 }
 
 /**  
@@ -92,7 +94,7 @@ mod.respondError = function(error, response, code = 500, message = null){
 mod.start = function(configFile = 'webserver.json', forceReload = false){
   config.load(
     handleError, 
-    boot, 
+    startServer, 
     configFile, 
     forceReload);
 }

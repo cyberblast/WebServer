@@ -76,16 +76,16 @@ module.exports = class Router {
     this.blobCache = settings.server.blobCache || false;
     const self = this;
     this.handler = {
-      "file": (server, request, response, route) => {
-        const filePath = self.fileRoot + route.content;
+      "file": (context) => {
+        const filePath = self.fileRoot + context.route.content;
         console.log(`loading file "${filePath}"`);
-        const useBlobCache = route.blobCache === true || self.blobCache;
-        self.navigateFile(server, request, response, filePath, useBlobCache);
+        const useBlobCache = context.route.blobCache === true || self.blobCache;
+        self.navigateFile(context, filePath, useBlobCache);
       }, 
-      "module": (server, request, response, route) => {
-        const mod = self.apiRoot + '/' + route.module;
-        console.log(`loading module "${mod}" to run "${route.function}"`);
-        self.navigateModule(server, request, response, mod, route.function);
+      "module": (context) => {
+        const mod = self.apiRoot + '/' + context.route.module;
+        console.log(`loading module "${mod}" to run "${context.route.function}"`);
+        self.navigateModule(context, mod, route.function);
       }
     };
     this.routes.forEach(qualifyRoute);    
@@ -98,23 +98,23 @@ module.exports = class Router {
     this.event.emit('error', err, response, code, message);
   }
 
-  navigate(server, request, response){
-    const requestPath = url.parse(request.url).pathname;
-    const client = request.socket.remoteAddress.split(':').pop();
-    console.log(`Request for "${requestPath}" received from ${client}`);
+  navigate(context){
+    const requestPath = url.parse(context.request.url).pathname;
+    context.client = context.request.socket.remoteAddress.split(':').pop();
+    console.log(`Request for "${requestPath}" received from ${context.client}`);
 
-    let route = this.selectRoute(requestPath);
+    context.route = this.selectRoute(requestPath);
 
-    if(route === undefined){
-      this.handleError(`No route found for path "${requestPath}"!`, response, 404, default404Message);
+    if(context.route === undefined){
+      this.handleError(`No route found for path "${requestPath}"!`, context.response, 404, default404Message);
       return;
     }
 
-    const handler = this.handler[route.handler];
+    const handler = this.handler[context.route.handler];
     if(handler !== undefined){
-      this.handler[route.handler](server, request, response, route);
+      this.handler[context.route.handler](context);
     } else {
-      this.handleError(`Unknown route handler "${route.handler}"`, response, 500, `Error in webserver configuration file`);
+      this.handleError(`Unknown route handler "${context.route.handler}"`, context.response, 500, `Error in webserver configuration file`);
     }
   }
 
@@ -130,60 +130,61 @@ module.exports = class Router {
     if(route !== undefined) return Object.assign({}, route, matchResult.tokens);
   }
 
-  navigateFile(server, request, response, filePath, useBlobCache){
+  navigateFile(context, filePath, useBlobCache){
     if(!filePath){
-      self.handleError('Unable to handle empty path request!', response, 500);
+      self.handleError('Unable to handle empty path request!', context.response, 500);
       return;
     }
     const self = this;
     const onLoaded = function (err, data) {
       if (err) {
         // classic 404
-        self.handleError(err && err.message ? err.message : err, response, 404, default404Message);
+        self.handleError(err && err.message ? err.message : err, context.response, 404, default404Message);
         return;
       }
-      response.writeHead(200, {'Content-Type': contentType.get(filePath)});
-      response.write(data);
-      response.end();
+      context.response.writeHead(200, {'Content-Type': contentType.get(filePath)});
+      context.response.write(data);
+      context.response.end();
     };
     this.loader.get(filePath, onLoaded, useBlobCache);
   }
 
-  navigateModule(server, request, response, modPath, func){
+  navigateModule(context, modPath, func){
     const self = this;
     const normalized = path.resolve(modPath).toLowerCase();
     try {
       const mod = require(normalized);
       if(mod === undefined || mod[func] === undefined){
-        self.handleError(`No endpoint fount for requested module "${modPath}", function "${func}"!`, response, 404, default404Message);
+        self.handleError(`No endpoint fount for requested module "${modPath}", function "${func}"!`, context.response, 404, default404Message);
         return;
       }
       let rawData;
 
-      if (request.method === 'POST') {
+      if (context.request.method === 'POST') {
         rawData = '';
-        request.on('data', chunk => {
+        context.request.on('data', chunk => {
           rawData += chunk;
             // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
             if (rawData.length > 1e6) { 
                 // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
-                request.connection.destroy();
+                context.request.connection.destroy();
                 self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`);
             }
         });
       }
 
-      request.on('end', function () {  
-        self.runModule(mod, func, server, request, response, rawData);
+      context.request.on('end', function () {
+        context.data = rawData;
+        self.runModule(mod, func, context);
       });
     } catch(e){
-      this.handleError(e, response, 500);
+      this.handleError(e, context.response, 500);
     }
   }
 
-  runModule(mod, functionName, server, request, response, data){
-    const content = mod[functionName](server, request, response, data);
-    response.write(content);
-    response.end();
+  runModule(mod, functionName, context){
+    const content = mod[functionName](context);
+    if(content!= null) context.response.write(content);
+    context.response.end();
   }
 }
