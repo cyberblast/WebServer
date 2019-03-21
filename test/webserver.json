@@ -1,7 +1,11 @@
 {
   "server": {
     "port": 80,
-    "blobCache": false
+    "blobCache": false,
+    "headers": {
+      "X-UA-Compatible": "IE=edge",
+      "Access-Control-Allow-Origin": "*"
+    }
   },
   "router": {
     "fileRoot": "./test/webRoot",

@@ -44,7 +44,13 @@ function startServer(settings){
 
   // Create Server
   try{
-    server = http.createServer(process);
+    server = http.createServer((request, response) => {
+      const context = new RequestContext(mod);
+      context.request = request;
+      context.response = response;
+      response.setHeader()
+      process(context, settings);
+    });
     server.listen(settings.server.port);
     console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
   } catch(e){
@@ -54,10 +60,14 @@ function startServer(settings){
   }
 }
 
-function process(request, response){
-  const context = new RequestContext(mod);
-  context.request = request;
-  context.response = response;
+function process(context, settings){
+  const headers = settings.server.headers;
+  if(headers !== undefined){
+    for(let head in headers){
+      const value = headers[head];
+      context.response.setHeader(head, value);
+    }
+  }
   router.navigate(context);
 }
 
