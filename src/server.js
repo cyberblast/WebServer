@@ -69,7 +69,8 @@ mod.onError = function(callback){
 }
 
 /**
- * Send a standardized error to the client.
+ * Send a standardized error to the client.  
+ * Will also be called for all internal errors.
  * @param {string|Error} error - Original error to send via header
  * @param {http.ServerResponse} response - Current response object
  * @param {number} [code] - Http response status code  
