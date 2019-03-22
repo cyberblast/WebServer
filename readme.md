@@ -2,10 +2,10 @@
 
 A minimal node-based web server
 
-[repository](https://github.com/cyberblast/WebServer)  
-[npm package](https://www.npmjs.com/package/@cyberblast/webserver)
+[![GitHub version](https://badge.fury.io/gh/cyberblast%2FWebServer.svg)](https://badge.fury.io/gh/cyberblast%2FWebServer)
+[![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)
 
-## Features
+## Implemented Features
 
 * GET static files  
   like html markup, stylesheets, images etc...
@@ -15,8 +15,10 @@ A minimal node-based web server
   Just like GET but with added payload...
 * Define access routes  
   Allows to map request urls to local paths, for static files and function calls alike.
-* Simplest blob cache  
-  Keep once loaded files in memory.
+* Simple blob cache  
+  Keep once loaded files in memory
+* Set static response headers
+  To include with every response
 
 ## Installation
 
