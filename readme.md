@@ -17,7 +17,7 @@ A minimal node-based web server
   Allows to map request urls to local paths, for static files and function calls alike.
 * Simple blob cache  
   Keep once loaded files in memory
-* Set static response headers
+* Set static response headers  
   To include with every response
 
 ## Installation
