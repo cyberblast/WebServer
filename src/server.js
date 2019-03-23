@@ -18,6 +18,7 @@ function handleError(error, serverContext, code, message){
 }
 
 function respondError(error, serverContext, code, message){
+  if(serverContext == null) return;
   if(serverContext.response != null){
     if( serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true){
       serverContext.response.setHeader('Error', error);

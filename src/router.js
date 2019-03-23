@@ -112,8 +112,8 @@ module.exports = class Router {
               // TODO: make max upload limit configurable
               if (rawData.length > 1e6) { 
                   // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
+                  self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`, 413);
                   context.request.connection.destroy();
-                  self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`);
               }
           });
           context.request.on('end', function () {
@@ -175,18 +175,25 @@ module.exports = class Router {
       self.handleError('Unable to handle empty path request!', context, 500);
       return;
     }
-    const self = this;
-    const onLoaded = function (err, data) {
-      if (err) {
-        // classic 404
-        self.handleError(err && err.message ? err.message : err, context, 404, default404Message);
-        return;
-      }
-      context.response.writeHead(200, {'Content-Type': contentType.get(filePath)});
-      context.response.write(data);
-      context.response.end();
-    };
-    this.loader.get(filePath, onLoaded, useBlobCache);
+    const allowedMethods = ['GET', 'POST', 'HEAD'];
+    if( allowedMethods.includes(context.request.method)){        
+      const self = this;
+      const onLoaded = function (err, data) {
+        if (err) {
+          // classic 404
+          self.handleError(err && err.message ? err.message : err, context, 404, default404Message);
+          return;
+        }
+        context.response.writeHead(200, {'Content-Type': contentType.get(filePath)});
+        if(context.request.method !== 'HEAD')
+          context.response.write(data);
+        context.response.end();
+      };
+      this.loader.get(filePath, onLoaded, useBlobCache);
+    } else {
+      // method not allowed for static file requests
+      self.handleError(`Request method ${context.method.request} is not allowed for that request path`, context, 405);
+    }
   }
 
   navigateModule(context, modPath, func){
@@ -207,7 +214,7 @@ module.exports = class Router {
     }
     const method = this.navigateModuleMethods[context.request.method];
     if(method === undefined){
-      this.handleError(`Unable to process request method ${context.request.method}!`, context, 500);
+      this.handleError(`Unable to process request method ${context.request.method}!`, context, 405);
       return;
     }
     method(context, mod, func);
