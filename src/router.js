@@ -158,9 +158,9 @@ module.exports = class Router {
         self.handleError(`No endpoint fount for requested module "${modPath}", function "${func}"!`, context.response, 404, default404Message);
         return;
       }
-      let rawData;
 
       if (context.request.method === 'POST') {
+        let rawData;
         rawData = '';
         context.request.on('data', chunk => {
           rawData += chunk;
@@ -171,12 +171,14 @@ module.exports = class Router {
                 self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`);
             }
         });
+        context.request.on('end', function () {
+          context.data = rawData;
+          self.runModule(mod, func, context);
+        });
+      } else if (context.request.method === 'GET') {
+        self.runModule(mod, func, context);
       }
 
-      context.request.on('end', function () {
-        context.data = rawData;
-        self.runModule(mod, func, context);
-      });
     } catch(e){
       this.handleError(e, context.response, 500);
     }
