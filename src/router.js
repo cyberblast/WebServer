@@ -85,7 +85,7 @@ module.exports = class Router {
       "module": (context) => {
         const mod = self.apiRoot + '/' + context.route.module;
         console.log(`loading module "${mod}" to run "${context.route.function}"`);
-        self.navigateModule(context, mod, route.function);
+        self.navigateModule(context, mod, context.route.function);
       }
     };
     this.routes.forEach(qualifyRoute);    

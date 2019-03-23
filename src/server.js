@@ -48,7 +48,6 @@ function startServer(settings){
       const context = new RequestContext(mod);
       context.request = request;
       context.response = response;
-      response.setHeader()
       process(context, settings);
     });
     server.listen(settings.server.port);
