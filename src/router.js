@@ -94,7 +94,14 @@ module.exports = class Router {
       
       this.navigateModuleMethods = {
         GET: (context, mod, func) => {
+          const content = self.runModule(context, mod, func);
+          if(content!= null && context.response.finished === false) context.response.write(content);
+          context.response.end();
+        },
+        HEAD: (context, mod, func) => {
+          // dont set body content
           self.runModule(context, mod, func);
+          context.response.end();
         },
         POST: (context, mod, func) => {
           let rawData;
@@ -111,7 +118,9 @@ module.exports = class Router {
           });
           context.request.on('end', function () {
             context.data = rawData;
-            self.runModule(context, mod, func);
+            const content = self.runModule(context, mod, func);
+            if(content!= null && context.response.finished === false) context.response.write(content);
+            context.response.end();
           });
         }
       };
@@ -125,8 +134,8 @@ module.exports = class Router {
   onError(callback){
     this.event.on('error', callback);
   }
-  handleError(err, response, code = 404, message = null){
-    this.event.emit('error', err, response, code, message);
+  handleError(err, serverContext, code = 404, message = null){
+    this.event.emit('error', err, serverContext, code, message);
   }
 
   navigate(context){
@@ -137,7 +146,7 @@ module.exports = class Router {
     context.route = this.selectRoute(requestPath);
 
     if(context.route === undefined){
-      this.handleError(`No route found for path "${requestPath}"!`, context.response, 404, default404Message);
+      this.handleError(`No route found for path "${requestPath}"!`, context, 404, default404Message);
       return;
     }
 
@@ -145,7 +154,7 @@ module.exports = class Router {
     if(handler !== undefined){
       this.handler[context.route.handler](context);
     } else {
-      this.handleError(`Unknown route handler "${context.route.handler}"`, context.response, 500, `Error in webserver configuration file`);
+      this.handleError(`Unknown route handler "${context.route.handler}"`, context, 500, `Error in webserver configuration file`);
     }
   }
 
@@ -163,14 +172,14 @@ module.exports = class Router {
 
   navigateFile(context, filePath, useBlobCache){
     if(!filePath){
-      self.handleError('Unable to handle empty path request!', context.response, 500);
+      self.handleError('Unable to handle empty path request!', context, 500);
       return;
     }
     const self = this;
     const onLoaded = function (err, data) {
       if (err) {
         // classic 404
-        self.handleError(err && err.message ? err.message : err, context.response, 404, default404Message);
+        self.handleError(err && err.message ? err.message : err, context, 404, default404Message);
         return;
       }
       context.response.writeHead(200, {'Content-Type': contentType.get(filePath)});
@@ -188,29 +197,29 @@ module.exports = class Router {
       mod = require(normalized);
       if(mod === undefined || mod[func] === undefined){
         // function not found
-        self.handleError(`No endpoint fount for requested module "${modPath}", function "${func}"!`, context.response, 404, default404Message);
+        self.handleError(`No endpoint fount for requested module "${modPath}", function "${func}"!`, context, 404, default404Message);
         return;
       }
     } catch(e){
       // module not found
-      this.handleError(e, context.response, 404, default404Message);
+      this.handleError(e, context, 404, default404Message);
       return;
     }
     const method = this.navigateModuleMethods[context.request.method];
     if(method === undefined){
-      this.handleError(`Unable to process request method ${context.request.method}!`, context.response, 500);
+      this.handleError(`Unable to process request method ${context.request.method}!`, context, 500);
       return;
     }
     method(context, mod, func);
   }
 
   runModule(context, mod, func){
+    let content = null;
     try{
-      const content = mod[func](context);
-      if(content!= null && context.response.finished === false) context.response.write(content);
-      context.response.end();
+      content = mod[func](context);
     }catch(e){
-      this.handleError(e, context.response, 500);
+      this.handleError(e, context, 500);
     }
+    return content;
   }
 }

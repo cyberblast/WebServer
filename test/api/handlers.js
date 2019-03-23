@@ -11,7 +11,7 @@ module.exports = {
   alwaysBroken: function(serverContext){
     serverContext.server.respondError(
       'Explicit developer error message', 
-      serverContext.response, 
+      serverContext, 
       500, // opional
       'Public message' // optional
     );

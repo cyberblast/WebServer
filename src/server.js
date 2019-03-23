@@ -10,21 +10,23 @@ const errorPage = '<html><body><div style="height: 80%;display: flex;align-items
 let httpServer;
 let errorCallback;
 
-function handleError(error, response, code, message){
+function handleError(error, serverContext, code, message){
   if(errorCallback != null){
     errorCallback(error);
   }
-  respondError(error, response, code, message);
+  respondError(error, serverContext, code, message);
 }
 
-function respondError(error, response, code, message){
-  if(response != null){
-    if( response.writable === true && response.headersSent !== true){
-      response.setHeader('Error', error);
-      response.writeHead(code);
-      const status = `${code} ${response.statusMessage}`;
-      const errMarkup = errorPage.replace('STATUS', status).replace('ERROR', message || '');
-      response.write(errMarkup);
+function respondError(error, serverContext, code, message){
+  if(serverContext.response != null){
+    if( serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true){
+      serverContext.response.setHeader('Error', error);
+      serverContext.response.writeHead(code);
+      if(serverContext.request.method !== 'HEAD') {
+        const status = `${code} ${serverContext.response.statusMessage}`;
+        const errMarkup = errorPage.replace('STATUS', status).replace('ERROR', message || '');
+        serverContext.response.write(errMarkup);
+      }
     }
     if(response.finished !== true) response.end();
   }
@@ -82,8 +84,8 @@ mod.onError = function(callback){
  * @param {string} [message] - Additional message to add to the response body, displayed on the page  
  * default = null
  */
-mod.respondError = function(error, response, code = 500, message = null){
-  respondError(error, response, code, message);
+mod.respondError = function(error, serverContext, code = 500, message = null){
+  respondError(error, serverContext, code, message);
 }
 
 /**
