@@ -2,6 +2,12 @@
   "name": "@cyberblast/webserver",
   "version": "0.1.5",
   "description": "A minimal node-based web server",
+  "author": "cyberblast <git@cyberblast.org>",
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "webserver"
+  ],
   "main": "./src/server.js",
   "scripts": {
     "test": "node test/run.js",
@@ -13,12 +19,6 @@
     "type": "git",
     "url": "git+https://github.com/cyberblast/WebServer.git"
   },
-  "keywords": [
-    "node",
-    "webserver"
-  ],
-  "author": "cyberblast <git@cyberblast.org>",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/cyberblast/WebServer/issues"
   },
@@ -26,7 +26,9 @@
   "engines": {
     "node": "*"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@cyberblast/config": "0.0.2"
+  },
   "devDependencies": {},
   "optionalDependencies": {}
 }

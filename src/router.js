@@ -258,7 +258,7 @@ module.exports = class Router {
         context.response.setHeader('Access-Control-Allow-Methods', allowedMethods);
       }
       if(acrh !== null){
-        // TODO: Filter on allowed headers only
+        // TODO: make allowed headers configurable
         context.response.setHeader('Access-Control-Allow-Headers', acrh);
       }
     }
