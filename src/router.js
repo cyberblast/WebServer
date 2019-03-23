@@ -76,6 +76,8 @@ module.exports = class Router {
       this.fileRoot = settings.router.fileRoot || '';
       this.apiRoot = settings.router.apiRoot || '';
       this.blobCache = settings.server.blobCache || false;
+      this.allowedModuleMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
+      this.allowedFileMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
       const self = this;
 
       this.handler = {
@@ -122,6 +124,9 @@ module.exports = class Router {
             if(content!= null && context.response.finished === false) context.response.write(content);
             context.response.end();
           });
+        },
+        OPTIONS: (context) => {
+          self.processOptions(context, this.allowedModuleMethods);
         }
       };
 
@@ -172,11 +177,14 @@ module.exports = class Router {
 
   navigateFile(context, filePath, useBlobCache){
     if(!filePath){
-      self.handleError('Unable to handle empty path request!', context, 500);
+      this.handleError('Unable to handle empty path request!', context, 500);
       return;
     }
-    const allowedMethods = ['GET', 'POST', 'HEAD'];
-    if( allowedMethods.includes(context.request.method)){        
+    if('OPTIONS' === context.request.method){
+      this.processOptions(context, this.allowedFileMethods);
+      return;
+    }
+    if(this.allowedFileMethods.includes(context.request.method)){        
       const self = this;
       const onLoaded = function (err, data) {
         if (err) {
@@ -228,5 +236,32 @@ module.exports = class Router {
       this.handleError(e, context, 500);
     }
     return content;
+  }
+
+  processOptions(context, allowedMethods){
+    const acrm = context.request.getHeader('access-control-request-method');
+    const acrh = context.request.headers['access-control-request-headers'];
+    const origin = context.request.headers['origin'];
+    if(acrm === undefined && acrh === undefined && origin === undefined){
+      // not a cors preflight
+      context.response.setHeader('Allow', allowedMethods);
+    } else {
+      // cors preflight
+      context.response.setHeader("Access-Control-Allow-Credentials", "false");
+      if(origin !== null){
+        // TODO: make allowed cors origin configurable
+        context.response.setHeader('Access-Control-Allow-Origin', origin);
+        if(origin !== '*') // Add Origin to Vary Header, if Access-Control-Allow-Origin != * or null
+          context.response.setHeader('Vary', 'Origin');
+      }
+      if(acrm !== null){
+        context.response.setHeader('Access-Control-Allow-Methods', allowedMethods);
+      }
+      if(acrh !== null){
+        // TODO: Filter on allowed headers only
+        context.response.setHeader('Access-Control-Allow-Headers', acrh);
+      }
+    }
+    context.response.end();
   }
 }

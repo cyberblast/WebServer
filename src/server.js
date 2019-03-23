@@ -55,6 +55,7 @@ function startServer(settings){
 
 function process(context, settings, router){
   // set static headers
+  context.response.setHeader('Server', 'cyberblast');
   const headers = settings.server.headers;
   if(headers !== undefined){
     for(let head in headers){
