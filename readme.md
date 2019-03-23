@@ -32,20 +32,34 @@ const server = require('@cyberblast/webserver');
 ```
 Attach error handler
 ```js
-server.onError(err => { console.log(err); });
+server.onError(err => { console.error(err); });
 ```
 Start server
 ```js
 server.start();
 ```
+Route requests to custom js handlers
+```js
+static greetIp(serverContext){
+  return 'Hello' + serverContext.request.socket.remoteAddress.split(':').pop();
+}
+```
 Respond with a standardized error page
 ```js
-server.respondError(error, response, 500, 'Something went wrong! Hurt your IT admin...');
+static alwaysBroken(serverContext){
+  serverContext.server.respondError(
+    'Explicit developer error message', 
+    serverContext.response, 
+    500, // opional
+    'Public message' // optional
+  );
+}
 ```
 Stop server
 ```js
 server.stop();
 ```
+More examples can be found in the './test' directory
 
 ## Configuration
 

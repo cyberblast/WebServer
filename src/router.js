@@ -186,7 +186,7 @@ module.exports = class Router {
 
   runModule(mod, functionName, context){
     const content = mod[functionName](context);
-    if(content!= null) context.response.write(content);
+    if(content!= null && context.response.finished === false) context.response.write(content);
     context.response.end();
   }
 }
