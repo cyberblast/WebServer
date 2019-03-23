@@ -67,28 +67,59 @@ const match = {
 }
 
 module.exports = class Router {
-  constructor(settings){
+  constructor(settings, errorHandler){
     this.event = new events.EventEmitter();
-    this.loader = new BlobLoader();
-    this.routes = settings.router.routes;
-    this.fileRoot = settings.router.fileRoot || '';
-    this.apiRoot = settings.router.apiRoot || '';
-    this.blobCache = settings.server.blobCache || false;
-    const self = this;
-    this.handler = {
-      "file": (context) => {
-        const filePath = self.fileRoot + context.route.content;
-        console.log(`loading file "${filePath}"`);
-        const useBlobCache = context.route.blobCache === true || self.blobCache;
-        self.navigateFile(context, filePath, useBlobCache);
-      }, 
-      "module": (context) => {
-        const mod = self.apiRoot + '/' + context.route.module;
-        console.log(`loading module "${mod}" to run "${context.route.function}"`);
-        self.navigateModule(context, mod, context.route.function);
-      }
-    };
-    this.routes.forEach(qualifyRoute);    
+    if(errorHandler) this.onError(errorHandler);
+    try{
+      this.loader = new BlobLoader();
+      this.routes = settings.router.routes;
+      this.fileRoot = settings.router.fileRoot || '';
+      this.apiRoot = settings.router.apiRoot || '';
+      this.blobCache = settings.server.blobCache || false;
+      const self = this;
+
+      this.handler = {
+        "file": (context) => {
+          const filePath = self.fileRoot + context.route.content;
+          console.log(`loading file "${filePath}"`);
+          const useBlobCache = context.route.blobCache === true || self.blobCache;
+          self.navigateFile(context, filePath, useBlobCache);
+        }, 
+        "module": (context) => {
+          const mod = self.apiRoot + '/' + context.route.module;
+          console.log(`loading module "${mod}" to run "${context.route.function}"`);
+          self.navigateModule(context, mod, context.route.function);
+        }
+      };
+      
+      this.navigateModuleMethods = {
+        GET: (context, mod, func) => {
+          self.runModule(context, mod, func);
+        },
+        POST: (context, mod, func) => {
+          let rawData;
+          rawData = '';
+          context.request.on('data', chunk => {
+            rawData += chunk;
+              // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
+              // TODO: make max upload limit configurable
+              if (rawData.length > 1e6) { 
+                  // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
+                  context.request.connection.destroy();
+                  self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`);
+              }
+          });
+          context.request.on('end', function () {
+            context.data = rawData;
+            self.runModule(context, mod, func);
+          });
+        }
+      };
+
+      this.routes.forEach(qualifyRoute);
+    }catch(e){
+      handleError(e);
+    }
   }
 
   onError(callback){
@@ -151,42 +182,35 @@ module.exports = class Router {
 
   navigateModule(context, modPath, func){
     const self = this;
-    const normalized = path.resolve(modPath).toLowerCase();
+    let mod;
     try {
-      const mod = require(normalized);
+      const normalized = path.resolve(modPath).toLowerCase();
+      mod = require(normalized);
       if(mod === undefined || mod[func] === undefined){
+        // function not found
         self.handleError(`No endpoint fount for requested module "${modPath}", function "${func}"!`, context.response, 404, default404Message);
         return;
       }
-
-      if (context.request.method === 'POST') {
-        let rawData;
-        rawData = '';
-        context.request.on('data', chunk => {
-          rawData += chunk;
-            // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
-            if (rawData.length > 1e6) { 
-                // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
-                context.request.connection.destroy();
-                self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`);
-            }
-        });
-        context.request.on('end', function () {
-          context.data = rawData;
-          self.runModule(mod, func, context);
-        });
-      } else if (context.request.method === 'GET') {
-        self.runModule(mod, func, context);
-      }
-
     } catch(e){
-      this.handleError(e, context.response, 500);
+      // module not found
+      this.handleError(e, context.response, 404, default404Message);
+      return;
     }
+    const method = this.navigateModuleMethods[context.request.method];
+    if(method === undefined){
+      this.handleError(`Unable to process request method ${context.request.method}!`, context.response, 500);
+      return;
+    }
+    method(context, mod, func);
   }
 
-  runModule(mod, functionName, context){
-    const content = mod[functionName](context);
-    if(content!= null && context.response.finished === false) context.response.write(content);
-    context.response.end();
+  runModule(context, mod, func){
+    try{
+      const content = mod[func](context);
+      if(content!= null && context.response.finished === false) context.response.write(content);
+      context.response.end();
+    }catch(e){
+      this.handleError(e, context.response, 500);
+    }
   }
 }

@@ -59,7 +59,7 @@ Stop server
 ```js
 server.stop();
 ```
-More examples can be found in the './test' directory
+More examples can be found in the './test' directory of the repository.
 
 ## Configuration
 

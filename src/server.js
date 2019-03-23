@@ -3,12 +3,11 @@ module.exports = mod;
 
 const http = require('http');
 const config = require('./config');
-const RequestContext = require('./context');
+const ServerContext = require('./serverContext');
 const Router = require('./router');
 const errorPage = '<html><body><div style="height: 80%;display: flex;align-items: center;justify-content: center"><div style="max-width:600px;"><h1 style="font: 40px sans-serif;">STATUS</h1><span style="font: 14px consolas;">ERROR</span><div><span style="font: 14px consolas;"><a href="/">Back to the roots</a></span></div></div></div></body</html>';
 
-let router;
-let server;
+let httpServer;
 let errorCallback;
 
 function handleError(error, response, code, message){
@@ -33,33 +32,26 @@ function respondError(error, response, code, message){
 
 function startServer(settings){
   // Create Router
-  try{
-    router = new Router(settings);
-  }
-  catch(e){
-    handleError(e);
-    return;
-  }
-  router.onError(handleError);
+  const router = new Router(settings, handleError);
 
   // Create Server
   try{
-    server = http.createServer((request, response) => {
-      const context = new RequestContext(mod);
+    httpServer = http.createServer((request, response) => {
+      const context = new ServerContext(mod);
       context.request = request;
       context.response = response;
-      process(context, settings);
+      process(context, settings, router);
     });
-    server.listen(settings.server.port);
+    httpServer.listen(settings.server.port);
     console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
   } catch(e){
     handleError(e);
-    router = null;
-    server = null;
+    httpServer = null;
   }
 }
 
-function process(context, settings){
+function process(context, settings, router){
+  // set static headers
   const headers = settings.server.headers;
   if(headers !== undefined){
     for(let head in headers){
@@ -67,6 +59,7 @@ function process(context, settings){
       context.response.setHeader(head, value);
     }
   }
+  // process request
   router.navigate(context);
 }
 
@@ -102,10 +95,11 @@ mod.respondError = function(error, response, code = 500, message = null){
  */
 mod.start = function(configFile = 'webserver.json', forceReload = false){
   config.load(
-    handleError, 
-    startServer, 
-    configFile, 
-    forceReload);
+    handleError, // onError
+    startServer, // onSuccess
+    configFile, // filePath
+    forceReload // no caching
+  );
 }
 
 /**
@@ -113,10 +107,10 @@ mod.start = function(configFile = 'webserver.json', forceReload = false){
  * @param {boolean} [abortProcess] - Also abort Node process
  */
 mod.stop = function(abortProcess = false){
-  server.removeAllListeners()
-  console.log('Web server stopped!');
+  httpServer.removeAllListeners()
+  console.info('Web server stopped!');
   if(abortProcess) {
-    console.log('Aborting Node Process...');
+    console.info('Aborting Node Process...');
     process.abort();
   }
 }
