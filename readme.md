@@ -3,10 +3,7 @@
 A minimal node-based web server
 
 [![GitHub version](https://badge.fury.io/gh/cyberblast%2FWebServer.svg)](https://badge.fury.io/gh/cyberblast%2FWebServer)
-[![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)  
-**Master Branch**  
-[![Build Status](https://travis-ci.com/cyberblast/WebServer.svg?branch=master)](https://travis-ci.com/cyberblast/webserver)  
-**Dev Branch**  
+[![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)
 [![Build Status](https://travis-ci.com/cyberblast/WebServer.svg?branch=dev)](https://travis-ci.com/cyberblast/webserver)
 
 ## Implemented Features
