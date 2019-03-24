@@ -110,11 +110,8 @@ mod.start = function(configFile = 'webserver.json', forceReload = false){
  * Stop web server. 
  * @param {boolean} [abortProcess] - Also abort Node process
  */
-mod.stop = function(abortProcess = false){
-  httpServer.removeAllListeners()
+mod.stop = function(){
+  httpServer.removeAllListeners();
+  httpServer.close();
   console.info('Web server stopped!');
-  if(abortProcess) {
-    console.info('Aborting Node Process...');
-    process.abort();
-  }
 }
