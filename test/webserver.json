@@ -1,6 +1,6 @@
 {
   "server": {
-    "port": 80,
+    "port": 10880,
     "blobCache": false,
     "headers": {
       "X-UA-Compatible": "IE=edge",

@@ -1,8 +1,10 @@
 const server = require('../src/server');
 
-server.onError(error => {
-  console.error(error);
-});
+function onError(e){
+  throw e;
+}
+
+server.onError(onError);
 server.start('./test/webserver.json');
 
 /* 
