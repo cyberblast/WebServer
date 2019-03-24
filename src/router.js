@@ -1,7 +1,7 @@
 const url = require('url');
 const path = require('path');
 const events = require('events');
-const BlobLoader = require('./blobLoader');
+const BlobLoader = require('./BlobLoader');
 const contentType = require('./contentType');
 
 const default404Message = 'Ooops! The file you requested was not found on the server!';
