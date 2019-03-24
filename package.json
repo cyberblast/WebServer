@@ -15,6 +15,9 @@
     "postversion": "git push && git push --tags",
     "publish-npm": "npm publish --access public"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cyberblast/WebServer.git"
