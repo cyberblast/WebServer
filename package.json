@@ -10,7 +10,7 @@
   ],
   "main": "./src/server.js",
   "scripts": {
-    "test": "node test/run.js",
+    "test": "node --trace-deprecation --trace-warnings test/run.js",
     "version-patch": "npm version patch -m \"version increment to %s\"",
     "postversion": "git push && git push --tags",
     "publish-npm": "npm publish --access public"
@@ -30,7 +30,8 @@
     "node": "*"
   },
   "dependencies": {
-    "@cyberblast/config": "0.0.2"
+    "@cyberblast/config": "0.0.2",
+    "@cyberblast/logger": "0.0.3"
   },
   "devDependencies": {},
   "optionalDependencies": {}

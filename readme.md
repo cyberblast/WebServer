@@ -51,7 +51,7 @@ static alwaysBroken(serverContext){
   serverContext.server.respondError(
     'Explicit developer error message', 
     serverContext, 
-    500, // opional
+    500, // optional
     'Public message' // optional
   );
 }

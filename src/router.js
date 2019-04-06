@@ -81,13 +81,13 @@ module.exports = class Router {
       const self = this;
 
       this.handler = {
-        "file": (context) => {
+        "file": async (context) => {
           const filePath = self.fileRoot + context.route.content;
           console.log(`loading file "${filePath}"`);
           const useBlobCache = context.route.blobCache === true || self.blobCache;
-          self.navigateFile(context, filePath, useBlobCache);
+          await self.navigateFile(context, filePath, useBlobCache);
         }, 
-        "module": (context) => {
+        "module": async (context) => {
           const mod = self.apiRoot + '/' + context.route.module;
           console.log(`loading module "${mod}" to run "${context.route.function}"`);
           self.navigateModule(context, mod, context.route.function);
@@ -143,7 +143,7 @@ module.exports = class Router {
     this.event.emit('error', err, serverContext, code, message);
   }
 
-  navigate(context){
+  async navigate(context){
     const requestPath = url.parse(context.request.url).pathname;
     context.client = context.request.socket.remoteAddress.split(':').pop();
     console.log(`Request for "${requestPath}" received from ${context.client}`);
@@ -157,7 +157,7 @@ module.exports = class Router {
 
     const handler = this.handler[context.route.handler];
     if(handler !== undefined){
-      this.handler[context.route.handler](context);
+      await this.handler[context.route.handler](context);
     } else {
       this.handleError(`Unknown route handler "${context.route.handler}"`, context, 500, `Error in webserver configuration file`);
     }
@@ -175,7 +175,7 @@ module.exports = class Router {
     if(route !== undefined) return Object.assign({}, route, matchResult.tokens);
   }
 
-  navigateFile(context, filePath, useBlobCache){
+  async navigateFile(context, filePath, useBlobCache){
     if(!filePath){
       this.handleError('Unable to handle empty path request!', context, 500);
       return;
@@ -192,12 +192,20 @@ module.exports = class Router {
           self.handleError(err && err.message ? err.message : err, context, 404, default404Message);
           return;
         }
+      };
+      try{
+        const file = await this.loader.get(filePath, onLoaded, useBlobCache);
         context.response.writeHead(200, {'Content-Type': contentType.get(filePath)});
         if(context.request.method !== 'HEAD')
-          context.response.write(data);
+          context.response.write(file);
         context.response.end();
-      };
-      this.loader.get(filePath, onLoaded, useBlobCache);
+      }
+      catch(e)
+      {
+        // classic 404
+        this.handleError(e && e.message ? e.message : e, context, 404, default404Message);
+        return;
+      }
     } else {
       // method not allowed for static file requests
       self.handleError(`Request method ${context.method.request} is not allowed for that request path`, context, 405);

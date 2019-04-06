@@ -6,31 +6,33 @@ module.exports = class BlobLoader {
     this.cache = {};
   }
 
-  get(filePath, callback, useCache = true){
-    const normalized = path.resolve(filePath);
-    if(useCache){
-      if(this.cache[normalized] !== undefined){
-        // console.log(`Reading file ${normalized} from blob cache`);
-        callback(null, this.cache[normalized]);
-        return;
-      }
-    }
-    // console.log(`Reading file ${normalized} from file system`);
-    const self = this;
-    fs.readFile(normalized, function (err, data) {
-      if (err) {
-        callback(err, data);
-      } else {
-        if(useCache) {
-          self.cache[normalized] = data;
-        }
-        callback(null, data);
-      }
-    });
-  }
-
   clear(){
     delete this.cache;
     this.cache = {};
+  }
+
+  async get(filePath, useCache = true){
+    const normalized = path.resolve(filePath);
+
+    if(useCache && this.cache[normalized] !== undefined){
+      return this.cache[normalized];
+    }
+
+    const file = await this.readFile(filePath);
+
+    if(useCache) this.cache[normalized] = file;
+    return file;
+  }
+
+  async readFile(filePath){
+    return new Promise((resolve, reject) => {
+      fs.readFile(filePath, function (fsError, data) {
+        if (fsError) {
+          reject(fsError);
+          return;
+        }
+        resolve(data);
+      });
+    });
   }
 }

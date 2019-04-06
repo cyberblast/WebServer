@@ -3,9 +3,8 @@ module.exports = mod;
 
 const http = require('http');
 const config = require('@cyberblast/config');
-const ServerContext = require('./serverContext');
 const Router = require('./router');
-const errorPage = '<html><body><div style="height: 80%;display: flex;align-items: center;justify-content: center"><div style="max-width:600px;"><h1 style="font: 40px sans-serif;">STATUS</h1><span style="font: 14px consolas;">ERROR</span><div><span style="font: 14px consolas;"><a href="/">Back to the roots</a></span></div></div></div></body</html>';
+const content = require('./content/load');
 
 let httpServer;
 let errorCallback;
@@ -17,7 +16,7 @@ function handleError(error, serverContext, code, message){
   respondError(error, serverContext, code, message);
 }
 
-function respondError(error, serverContext, code, message){
+async function respondError(error, serverContext, code, message){
   if(serverContext == null) return;
   if(serverContext.response != null){
     if( serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true){
@@ -25,8 +24,11 @@ function respondError(error, serverContext, code, message){
       serverContext.response.writeHead(code);
       if(serverContext.request.method !== 'HEAD') {
         const status = `${code} ${serverContext.response.statusMessage}`;
-        const errMarkup = errorPage.replace('STATUS', status).replace('ERROR', message || '');
-        serverContext.response.write(errMarkup);
+        const errPage = await content('errorPage.html');
+        if(errPage){
+          const errMarkup = errPage.toString().replace('STATUS', status).replace('ERROR', message || '');
+          serverContext.response.write(errMarkup);
+        } else serverContext.response.write(`${status}<br/>${message}`);
       }
     }
     if(serverContext.response.finished !== true) serverContext.response.end();
@@ -40,7 +42,7 @@ function startServer(settings){
   // Create Server
   try{
     httpServer = http.createServer((request, response) => {
-      const context = new ServerContext(mod);
+      const context = { server: mod };
       context.request = request;
       context.response = response;
       process(context, settings, router);

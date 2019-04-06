@@ -21,7 +21,7 @@ async function test(){
 
 test();
 /* 
-TODO: 
+TODO: Do some testing:
 * Create Client
 * Call static pages
 * Call api handlers
