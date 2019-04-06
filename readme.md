@@ -2,9 +2,8 @@
 
 A minimal node-based web server
 
-[![GitHub version](https://badge.fury.io/gh/cyberblast%2FWebServer.svg)](https://badge.fury.io/gh/cyberblast%2FWebServer)
-[![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)
 [![Build Status](https://travis-ci.com/cyberblast/WebServer.svg?branch=dev)](https://travis-ci.com/cyberblast/webserver)
+[![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)
 
 ## Implemented Features
 
@@ -31,18 +30,16 @@ Create server
 ```js
 const server = require('@cyberblast/webserver');
 ```
-Attach error handler
-```js
-server.onError(err => { console.error(err); });
-```
 Start server
 ```js
 server.start();
+// or with explicit config file paths, like that:
+server.start('./config/webserver.json', './config/log.json');
 ```
 Route requests to custom js handlers
 ```js
 static greetIp(serverContext){
-  return 'Hello' + serverContext.request.socket.remoteAddress.split(':').pop();
+  return 'Hello ' + serverContext.request.socket.remoteAddress.split(':').pop();
 }
 ```
 Respond with a standardized error page
@@ -51,7 +48,7 @@ static alwaysBroken(serverContext){
   serverContext.server.respondError(
     'Explicit developer error message', 
     serverContext, 
-    500, // opional
+    500, // optional
     'Public message' // optional
   );
 }
@@ -67,6 +64,9 @@ More examples can be found in the './test' directory of the repository.
 Create a config file named `webserver.json` at your project root directory. 
 
 Alternatively, you can create a json config file anywhere and specify its path/name when starting the server: `server.start('./src/server/config.json')`
+
+You can also specify logging settings in a separate log config file, by default expected to be at your project root directory at `log.json`, or specify a different path as a second parameter for server.start like that: `server.start('./config/webserver.json', './config/log.json');`.  
+More details about the logger can be found in [a separate repository](https://github.com/cyberblast/logger).
 
 ### Configuration Settings
 
@@ -104,11 +104,8 @@ Sample webserver.json file
 * router.routes[x].module: Valid for modulehandler rules only. Specify js file to load as module. 
 * router.routes[x].function: Valid for modulehandler rules only. Specify name of static function to call.
 
-## Contribution & Collaboration
+## Legal
 
-First, before deciding to contribute to this repository please read and accept LICENSE & CONTRIBUTING files.  
-Any contribution requires and assumes full consent.
-
-## Legal implications
+Please take note of files [LICENSE](https://raw.githubusercontent.com/cyberblast/webserver/master/LICENSE) and [CONTRIBUTING](https://raw.githubusercontent.com/cyberblast/webserver/master/CONTRIBUTING).
 
 This is an experimental piece of code. This is NOT a production ready web server. Use on your own risk.

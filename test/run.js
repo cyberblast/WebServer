@@ -11,8 +11,8 @@ function sleep(ms){
 }
 
 async function test(){  
-  server.onError(onError);
-  server.start('./test/webserver.json');
+  server.start('./test/webserver.json', './test/log.json');
+  //server.onError(onError);
 
   await sleep(5000);
     
@@ -21,7 +21,7 @@ async function test(){
 
 test();
 /* 
-TODO: 
+TODO: Do some testing:
 * Create Client
 * Call static pages
 * Call api handlers
