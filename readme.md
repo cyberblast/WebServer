@@ -2,9 +2,8 @@
 
 A minimal node-based web server
 
-[![GitHub version](https://badge.fury.io/gh/cyberblast%2FWebServer.svg)](https://badge.fury.io/gh/cyberblast%2FWebServer)
-[![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)
 [![Build Status](https://travis-ci.com/cyberblast/WebServer.svg?branch=dev)](https://travis-ci.com/cyberblast/webserver)
+[![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)
 
 ## Implemented Features
 
@@ -42,7 +41,7 @@ server.start();
 Route requests to custom js handlers
 ```js
 static greetIp(serverContext){
-  return 'Hello' + serverContext.request.socket.remoteAddress.split(':').pop();
+  return 'Hello ' + serverContext.request.socket.remoteAddress.split(':').pop();
 }
 ```
 Respond with a standardized error page
@@ -104,11 +103,8 @@ Sample webserver.json file
 * router.routes[x].module: Valid for modulehandler rules only. Specify js file to load as module. 
 * router.routes[x].function: Valid for modulehandler rules only. Specify name of static function to call.
 
-## Contribution & Collaboration
+## Legal
 
-First, before deciding to contribute to this repository please read and accept LICENSE & CONTRIBUTING files.  
-Any contribution requires and assumes full consent.
-
-## Legal implications
+Please take note of files [LICENSE](https://raw.githubusercontent.com/cyberblast/webserver/master/LICENSE) and [CONTRIBUTING](https://raw.githubusercontent.com/cyberblast/webserver/master/CONTRIBUTING).
 
 This is an experimental piece of code. This is NOT a production ready web server. Use on your own risk.

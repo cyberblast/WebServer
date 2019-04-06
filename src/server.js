@@ -99,13 +99,14 @@ mod.respondError = function(error, serverContext, code = 500, message = null){
  * @param {boolean} [forceReload] - reload settings file every time you call start.  
  * default: false
  */
-mod.start = function(configFile = 'webserver.json', forceReload = false){
-  config.load(
-    handleError, // onError
-    startServer, // onSuccess
-    configFile, // filePath
-    forceReload // no caching
-  );
+mod.start = async function(configFile = 'webserver.json', forceReload = false){
+  try{
+    await config.load(configFile, forceReload);
+  }
+  catch(e){
+    handleError(e);
+  }
+  startServer(config.settings);
 }
 
 /**
