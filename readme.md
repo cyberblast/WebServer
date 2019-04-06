@@ -104,6 +104,18 @@ Sample webserver.json file
 * router.routes[x].module: Valid for modulehandler rules only. Specify js file to load as module. 
 * router.routes[x].function: Valid for modulehandler rules only. Specify name of static function to call.
 
+Sample log.json file: 
+```json
+{
+  "rules": [
+    {
+      "name": "all",
+      "console": true
+    }
+  ]
+}
+```
+
 ## Legal
 
 Please take note of files [LICENSE](https://raw.githubusercontent.com/cyberblast/webserver/master/LICENSE) and [CONTRIBUTING](https://raw.githubusercontent.com/cyberblast/webserver/master/CONTRIBUTING).

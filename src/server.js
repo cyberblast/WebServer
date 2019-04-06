@@ -186,4 +186,5 @@ mod.stop = function(){
     severity: logger.severity.Info,
     message: `Server stopped.`
   });
+  logger.close();
 }
