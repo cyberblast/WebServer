@@ -11,8 +11,8 @@ function sleep(ms){
 }
 
 async function test(){  
-  server.onError(onError);
-  server.start('./test/webserver.json');
+  server.start('./test/webserver.json', './test/log.json');
+  //server.onError(onError);
 
   await sleep(5000);
     

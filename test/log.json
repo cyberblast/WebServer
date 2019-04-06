@@ -1,0 +1,9 @@
+{
+  "chatty": true,
+  "rules": [
+    {
+      "name": "all",
+      "console": true
+    }
+  ]
+}

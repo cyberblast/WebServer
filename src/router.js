@@ -1,6 +1,5 @@
 const url = require('url');
 const path = require('path');
-const events = require('events');
 const BlobLoader = require('./BlobLoader');
 const contentType = require('./contentType');
 
@@ -67,91 +66,85 @@ const match = {
 }
 
 module.exports = class Router {
-  constructor(settings, errorHandler){
-    this.event = new events.EventEmitter();
-    if(errorHandler) this.onError(errorHandler);
-    try{
-      this.loader = new BlobLoader();
-      this.routes = settings.router.routes;
-      this.fileRoot = settings.router.fileRoot || '';
-      this.apiRoot = settings.router.apiRoot || '';
-      this.blobCache = settings.server.blobCache || false;
-      this.allowedModuleMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
-      this.allowedFileMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
-      const self = this;
+  constructor(settings, logger){
+    this.logger = logger;
+    this.loader = new BlobLoader();
+    this.routes = settings.router.routes;
+    this.fileRoot = settings.router.fileRoot || '';
+    this.apiRoot = settings.router.apiRoot || '';
+    this.blobCache = settings.server.blobCache || false;
+    this.allowedModuleMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
+    this.allowedFileMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
+    const self = this;
 
-      this.handler = {
-        "file": async (context) => {
-          const filePath = self.fileRoot + context.route.content;
-          console.log(`loading file "${filePath}"`);
-          const useBlobCache = context.route.blobCache === true || self.blobCache;
-          await self.navigateFile(context, filePath, useBlobCache);
-        }, 
-        "module": async (context) => {
-          const mod = self.apiRoot + '/' + context.route.module;
-          console.log(`loading module "${mod}" to run "${context.route.function}"`);
-          self.navigateModule(context, mod, context.route.function);
-        }
-      };
-      
-      this.navigateModuleMethods = {
-        GET: (context, mod, func) => {
+    this.handler = {
+      "file": async (context) => {
+        const filePath = self.fileRoot + context.route.content;
+        const useBlobCache = context.route.blobCache === true || self.blobCache;
+        await self.navigateFile(context, filePath, useBlobCache);
+      }, 
+      "module": async (context) => {
+        const mod = self.apiRoot + '/' + context.route.module;
+        self.navigateModule(context, mod, context.route.function);
+      }
+    };
+    
+    this.navigateModuleMethods = {
+      GET: (context, mod, func) => {
+        const content = self.runModule(context, mod, func);
+        if(content!= null && context.response.finished === false) context.response.write(content);
+        context.response.end();
+      },
+      HEAD: (context, mod, func) => {
+        // dont set body content
+        self.runModule(context, mod, func);
+        context.response.end();
+      },
+      POST: (context, mod, func) => {
+        let rawData;
+        rawData = '';
+        context.request.on('data', chunk => {
+          rawData += chunk;
+            // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
+            // TODO: make max upload limit configurable
+            if (rawData.length > 1e6) { 
+                // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
+                self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`, 413);
+                context.request.connection.destroy();
+            }
+        });
+        context.request.on('end', function () {
+          context.data = rawData;
           const content = self.runModule(context, mod, func);
           if(content!= null && context.response.finished === false) context.response.write(content);
           context.response.end();
-        },
-        HEAD: (context, mod, func) => {
-          // dont set body content
-          self.runModule(context, mod, func);
-          context.response.end();
-        },
-        POST: (context, mod, func) => {
-          let rawData;
-          rawData = '';
-          context.request.on('data', chunk => {
-            rawData += chunk;
-              // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
-              // TODO: make max upload limit configurable
-              if (rawData.length > 1e6) { 
-                  // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
-                  self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`, 413);
-                  context.request.connection.destroy();
-              }
-          });
-          context.request.on('end', function () {
-            context.data = rawData;
-            const content = self.runModule(context, mod, func);
-            if(content!= null && context.response.finished === false) context.response.write(content);
-            context.response.end();
-          });
-        },
-        OPTIONS: (context) => {
-          self.processOptions(context, this.allowedModuleMethods);
-        }
-      };
+        });
+      },
+      OPTIONS: (context) => {
+        self.processOptions(context, this.allowedModuleMethods);
+      }
+    };
 
-      this.routes.forEach(qualifyRoute);
-    }catch(e){
-      handleError(e);
-    }
-  }
-
-  onError(callback){
-    this.event.on('error', callback);
-  }
-  handleError(err, serverContext, code = 404, message = null){
-    this.event.emit('error', err, serverContext, code, message);
+    this.routes.forEach(qualifyRoute);
   }
 
   async navigate(context){
     const requestPath = url.parse(context.request.url).pathname;
     context.client = context.request.socket.remoteAddress.split(':').pop();
-    console.log(`Request for "${requestPath}" received from ${context.client}`);
-
     context.route = this.selectRoute(requestPath);
 
     if(context.route === undefined){
-      this.handleError(`No route found for path "${requestPath}"!`, context, 404, default404Message);
+      this.logger.log({
+        category: this.logger.category.webserver,
+        severity: this.logger.severity.Error,
+        message: `No route found for path "${requestPath}"!`,
+        respond: {
+          error: `No route found for path "${requestPath}"!`,
+          serverContext: context,
+          code: 404,
+          message: default404Message
+        }
+      });
       return;
     }
 
@@ -159,7 +152,17 @@ module.exports = class Router {
     if(handler !== undefined){
       await this.handler[context.route.handler](context);
     } else {
-      this.handleError(`Unknown route handler "${context.route.handler}"`, context, 500, `Error in webserver configuration file`);
+      this.logger.log({
+        category: this.logger.category.webserver,
+        severity: this.logger.severity.Error,
+        message: `Unknown route handler "${context.route.handler}"`,
+        respond: {
+          error: `Unknown route handler "${context.route.handler}"`,
+          serverContext: context,
+          code: 500,
+          message: `Error in webserver configuration file.`
+        }
+      });
     }
   }
 
@@ -176,61 +179,129 @@ module.exports = class Router {
   }
 
   async navigateFile(context, filePath, useBlobCache){
+    this.logger.log({
+      category: this.logger.category.webserver,
+      severity: this.logger.severity.Verbose,
+      message: `Navigating to File '${filePath}'.`
+    });
     if(!filePath){
-      this.handleError('Unable to handle empty path request!', context, 500);
+      this.logger.log({
+        category: this.logger.category.webserver,
+        severity: this.logger.severity.Error,
+        message: 'Unable to handle empty path request!',
+        respond: {
+          error: 'Unable to handle empty path request!',
+          serverContext: context,
+          code: 500
+        }
+      });
       return;
     }
     if('OPTIONS' === context.request.method){
       this.processOptions(context, this.allowedFileMethods);
       return;
     }
-    if(this.allowedFileMethods.includes(context.request.method)){        
-      const self = this;
-      const onLoaded = function (err, data) {
-        if (err) {
-          // classic 404
-          self.handleError(err && err.message ? err.message : err, context, 404, default404Message);
-          return;
-        }
-      };
+    if(this.allowedFileMethods.includes(context.request.method)){   
       try{
-        const file = await this.loader.get(filePath, onLoaded, useBlobCache);
+        const file = await this.loader.get(filePath, useBlobCache);
         context.response.writeHead(200, {'Content-Type': contentType.get(filePath)});
         if(context.request.method !== 'HEAD')
           context.response.write(file);
         context.response.end();
+        this.logger.log({
+          category: this.logger.category.webserver,
+          severity: this.logger.severity.Verbose,
+          message: `File response '${filePath}' completed.`
+        });
       }
       catch(e)
       {
         // classic 404
-        this.handleError(e && e.message ? e.message : e, context, 404, default404Message);
+        this.logger.log({
+          category: this.logger.category.webserver,
+          severity: this.logger.severity.Warning,
+          message: `Error loading file '${filePath}'.`,
+          respond: {
+            error: e,
+            serverContext: context,
+            code: 404,
+            message: default404Message
+          },
+          data: e
+        });
         return;
       }
     } else {
       // method not allowed for static file requests
-      self.handleError(`Request method ${context.method.request} is not allowed for that request path`, context, 405);
+      const err = `Request method ${context.method.request} is not allowed for that request path`;
+      this.logger.log({
+        category: this.logger.category.webserver,
+        severity: this.logger.severity.Warning,
+        message: err,
+        respond: {
+          error: err,
+          serverContext: context,
+          code: 405
+        }
+      });
     }
   }
 
   navigateModule(context, modPath, func){
-    const self = this;
+    this.logger.log({
+      category: this.logger.category.webserver,
+      severity: this.logger.severity.Verbose,
+      message: `Loading module ${modPath} to call ${func}.`
+    });
     let mod;
     try {
       const normalized = path.resolve(modPath).toLowerCase();
       mod = require(normalized);
       if(mod === undefined || mod[func] === undefined){
         // function not found
-        self.handleError(`No endpoint fount for requested module "${modPath}", function "${func}"!`, context, 404, default404Message);
+        const message = `No endpoint fount for requested module "${modPath}", function "${func}"!`;
+        this.logger.log({
+          category: this.logger.category.webserver,
+          severity: this.logger.severity.Warning,
+          message: message,
+          respond: {
+            error: message,
+            serverContext: context,
+            code: 404,
+            message: default404Message
+          }
+        });
         return;
       }
     } catch(e){
       // module not found
-      this.handleError(e, context, 404, default404Message);
+      this.logger.log({
+        category: this.logger.category.webserver,
+        severity: this.logger.severity.Warning,
+        message: `Module '${modPath}' not found.`,
+        respond: {
+          error: e,
+          serverContext: context,
+          code: 404,
+          message: default404Message
+        },
+        data: e
+      });
       return;
     }
     const method = this.navigateModuleMethods[context.request.method];
     if(method === undefined){
-      this.handleError(`Unable to process request method ${context.request.method}!`, context, 405);
+      const message = `Unable to process request method ${context.request.method}!`;
+      this.logger.log({
+        category: this.logger.category.webserver,
+        severity: this.logger.severity.Warning,
+        message: message,
+        respond: {
+          error: message,
+          serverContext: context,
+          code: 405
+        }
+      });
       return;
     }
     method(context, mod, func);
@@ -247,6 +318,11 @@ module.exports = class Router {
   }
 
   processOptions(context, allowedMethods){
+    this.logger.log({
+      category: this.logger.category.webserver,
+      severity: this.logger.severity.Verbose,
+      message: 'Creating OPTION response.',
+    });
     const acrm = context.request.getHeader('access-control-request-method');
     const acrh = context.request.headers['access-control-request-headers'];
     const origin = context.request.headers['origin'];

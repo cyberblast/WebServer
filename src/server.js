@@ -2,28 +2,26 @@ let mod = {};
 module.exports = mod;
 
 const http = require('http');
-const config = require('@cyberblast/config');
+const Config = require('@cyberblast/config');
 const Router = require('./router');
 const content = require('./content/load');
+const Logger = require('@cyberblast/logger');
 
-let httpServer;
-let errorCallback;
-
-function handleError(error, serverContext, code, message){
-  if(errorCallback != null){
-    errorCallback(error);
-  }
-  respondError(error, serverContext, code, message);
-}
+let httpServer, logger, router, config;
 
 async function respondError(error, serverContext, code, message){
   if(serverContext == null) return;
   if(serverContext.response != null){
     if( serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true){
-      serverContext.response.setHeader('Error', error);
-      serverContext.response.writeHead(code);
+      logger.log({
+        category: logger.category.webserver,
+        severity: logger.severity.Verbose,
+        message: `Creating Error Response`
+      });
+      if(error != null) serverContext.response.setHeader('Error', error);
+      if(code != null) serverContext.response.writeHead(code);
       if(serverContext.request.method !== 'HEAD') {
-        const status = `${code} ${serverContext.response.statusMessage}`;
+        const status = code ? `${code} ${serverContext.response.statusMessage}` : '';
         const errPage = await content('errorPage.html');
         if(errPage){
           const errMarkup = errPage.toString().replace('STATUS', status).replace('ERROR', message || '');
@@ -35,30 +33,60 @@ async function respondError(error, serverContext, code, message){
   }
 }
 
-function startServer(settings){
+function startServer(){
   // Create Router
-  const router = new Router(settings, handleError);
+  try{
+    router = new Router(config.settings, logger);
+    logger.log({
+      category: logger.category.webserver,
+      severity: logger.severity.Verbose,
+      message: `Router created.`
+    });
+  }
+  catch(e){
+    logger.log({
+      category: logger.category.webserver,
+      severity: logger.severity.Error,
+      message: `Error creating router.`,
+      data: e
+    });
+    return;
+  }
 
   // Create Server
   try{
     httpServer = http.createServer((request, response) => {
+      logger.log({
+        category: logger.category.webserver,
+        severity: logger.severity.Verbose,
+        message: `Incoming request from '${request.socket.remoteAddress}' for '${request.method} ${request.url}'.`
+      });
       const context = { server: mod };
       context.request = request;
       context.response = response;
-      process(context, settings, router);
+      process(context);
     });
-    httpServer.listen(settings.server.port);
-    console.log(`Server running at http://127.0.0.1:${settings.server.port}/`);
+    httpServer.listen(config.settings.server.port);
+    logger.log({
+      category: logger.category.webserver,
+      severity: logger.severity.Info,
+      message: `Server up & listening at http://127.0.0.1:${config.settings.server.port}/`
+    });
   } catch(e){
-    handleError(e);
+    logger.log({
+      category: logger.category.webserver,
+      severity: logger.severity.Error,
+      message: `Error creating http server at 'http://127.0.0.1:${config.settings.server.port}/'.`,
+      data: e
+    });
     httpServer = null;
   }
 }
 
-function process(context, settings, router){
+function process(context){
   // set static headers
   context.response.setHeader('Server', 'cyberblast');
-  const headers = settings.server.headers;
+  const headers = config.settings.server.headers;
   if(headers !== undefined){
     for(let head in headers){
       const value = headers[head];
@@ -66,16 +94,23 @@ function process(context, settings, router){
     }
   }
   // process request
-  router.navigate(context);
-}
-
-/**  
- * Register an error handler to track internal errors.  
- * Use like that: `server.onError(err => { console.error(err); })`
- * @param {function({error: (string|Error)}): void} callback - Function to call on error
- */
-mod.onError = function(callback){
-  errorCallback = callback;
+  try{
+    router.navigate(context);
+  }
+  catch(e){
+    logger.log({
+      category: logger.category.webserver,
+      severity: logger.severity.Error,
+      message: `Unexpected Error`,
+      respond: {
+        error: e,
+        serverContext: context,
+        code: 500,
+        message: `Unexpected Error`
+      }, 
+      data: e
+    });
+  }
 }
 
 /**
@@ -88,8 +123,21 @@ mod.onError = function(callback){
  * @param {string} [message] - Additional message to add to the response body, displayed on the page  
  * default = null
  */
-mod.respondError = function(error, serverContext, code = 500, message = null){
-  respondError(error, serverContext, code, message);
+mod.respondError = async function(error, serverContext, code = 500, message = null){
+  await respondError(error, serverContext, code, message);
+}
+
+/**
+ * Check if a log event is also meant to create a http response error page
+ */
+function logResponse(logEvent){
+  if(logEvent.respond !== undefined){
+    respondError(
+      logEvent.respond.error, 
+      logEvent.respond.serverContext, 
+      logEvent.respond.code, 
+      logEvent.respond.message);
+  }
 }
 
 /**
@@ -99,12 +147,24 @@ mod.respondError = function(error, serverContext, code = 500, message = null){
  * @param {boolean} [forceReload] - reload settings file every time you call start.  
  * default: false
  */
-mod.start = async function(configFile = 'webserver.json', forceReload = false){
+mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'log.json'){
+  logger = new Logger(logConfigFile);
+  await logger.init();
+  logger.defineCategory('webserver');
+  logger.onLog(logResponse);
+  mod.logger = logger;
+
   try{
-    await config.load(configFile, forceReload);
+    config = new Config(webConfigFile);
+    await config.load();
   }
   catch(e){
-    handleError(e);
+    logger.log({
+      category: logger.category.webserver,
+      severity: logger.severity.Error,
+      message: `Error loading web config file '${webConfigFile}'.`,
+      data: e
+    });
   }
   startServer(config.settings);
 }
@@ -114,7 +174,16 @@ mod.start = async function(configFile = 'webserver.json', forceReload = false){
  * @param {boolean} [abortProcess] - Also abort Node process
  */
 mod.stop = function(){
-  httpServer.removeAllListeners();
-  httpServer.close();
-  console.info('Web server stopped!');
+  logger.log({
+    category: logger.category.webserver,
+    severity: logger.severity.Verbose,
+    message: `Stopping web server.`
+  });
+  if(httpServer != null) httpServer.removeAllListeners();
+  if(httpServer != null) httpServer.close();
+  logger.log({
+    category: logger.category.webserver,
+    severity: logger.severity.Info,
+    message: `Server stopped.`
+  });
 }

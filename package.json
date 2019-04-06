@@ -30,8 +30,8 @@
     "node": "*"
   },
   "dependencies": {
-    "@cyberblast/config": "0.0.3",
-    "@cyberblast/logger": "0.0.3"
+    "@cyberblast/config": "0.0.5",
+    "@cyberblast/logger": "0.0.6"
   },
   "devDependencies": {},
   "optionalDependencies": {}
