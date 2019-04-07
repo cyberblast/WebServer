@@ -1,7 +1,9 @@
 const url = require('url');
 const path = require('path');
 const BlobLoader = require('./BlobLoader');
-const contentType = require('./contentType');
+const {
+  contentTypeByExtension
+} = require('./contentType');
 
 const default404Message = 'Ooops! The file you requested was not found on the server!';
 
@@ -204,7 +206,7 @@ module.exports = class Router {
     if(this.allowedFileMethods.includes(context.request.method)){   
       try{
         const file = await this.loader.get(filePath, useBlobCache);
-        context.response.writeHead(200, {'Content-Type': contentType.get(filePath)});
+        context.response.writeHead(200, {'Content-Type': contentTypeByExtension(filePath)});
         if(context.request.method !== 'HEAD')
           context.response.write(file);
         context.response.end();
