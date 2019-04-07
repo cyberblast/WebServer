@@ -171,7 +171,6 @@ mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'lo
 
 /**
  * Stop web server. 
- * @param {boolean} [abortProcess] - Also abort Node process
  */
 mod.stop = function(){
   logger.log({
@@ -180,11 +179,23 @@ mod.stop = function(){
     message: `Stopping web server.`
   });
   if(httpServer != null) httpServer.removeAllListeners();
-  if(httpServer != null) httpServer.close();
-  logger.log({
-    category: logger.category.webserver,
-    severity: logger.severity.Info,
-    message: `Server stopped.`
-  });
-  logger.close();
+  if(httpServer != null) {
+    httpServer.close(() => {
+      logger.log({
+        category: logger.category.webserver,
+        severity: logger.severity.Info,
+        message: `Server stopped.`
+      });
+      logger.close();
+      httpServer.unref();
+      httpServer = null;
+    });
+  } else {
+    logger.log({
+      category: logger.category.webserver,
+      severity: logger.severity.Info,
+      message: `Server stopped.`
+    });
+    logger.close();
+  }
 }
