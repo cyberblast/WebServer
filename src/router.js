@@ -4,6 +4,9 @@ const BlobLoader = require('./BlobLoader');
 const {
   contentTypeByExtension
 } = require('./contentType');
+const {
+  severity
+} = require('@cyberblast/logger');
 
 const default404Message = 'Ooops! The file you requested was not found on the server!';
 
@@ -70,6 +73,7 @@ const match = {
 module.exports = class Router {
   constructor(settings, logger) {
     this.logger = logger;
+    this.category = logger.category.webserver;
     this.loader = new BlobLoader();
     this.routes = settings.router.routes;
     this.fileRoot = settings.router.fileRoot || '';
@@ -113,8 +117,8 @@ module.exports = class Router {
             // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
             const message = `Request data length exceeds ${1e6} bytes. Request connection terminated.`;
             this.logger.log({
-              category: this.logger.category.webserver,
-              severity: this.logger.severity.Warning,
+              category: this.category,
+              severity: severity.Warning,
               message
             });
             context.response.setHeader('Error', message);
@@ -145,8 +149,8 @@ module.exports = class Router {
 
     if (context.route === undefined) {
       this.logger.log({
-        category: this.logger.category.webserver,
-        severity: this.logger.severity.Error,
+        category: this.category,
+        severity: severity.Error,
         message: `No route found for path "${requestPath}"!`,
         respond: {
           error: `No route found for path "${requestPath}"!`,
@@ -163,8 +167,8 @@ module.exports = class Router {
       await this.handler[context.route.handler](context);
     } else {
       this.logger.log({
-        category: this.logger.category.webserver,
-        severity: this.logger.severity.Error,
+        category: this.category,
+        severity: severity.Error,
         message: `Unknown route handler "${context.route.handler}"`,
         respond: {
           error: `Unknown route handler "${context.route.handler}"`,
@@ -190,14 +194,14 @@ module.exports = class Router {
 
   async navigateFile(context, filePath, useBlobCache) {
     this.logger.log({
-      category: this.logger.category.webserver,
-      severity: this.logger.severity.Verbose,
+      category: this.category,
+      severity: severity.Verbose,
       message: `Navigating to File '${filePath}'.`
     });
     if (!filePath) {
       this.logger.log({
-        category: this.logger.category.webserver,
-        severity: this.logger.severity.Error,
+        category: this.category,
+        severity: severity.Error,
         message: 'Unable to handle empty path request!',
         respond: {
           error: 'Unable to handle empty path request!',
@@ -219,16 +223,16 @@ module.exports = class Router {
           context.response.write(file);
         context.response.end();
         this.logger.log({
-          category: this.logger.category.webserver,
-          severity: this.logger.severity.Verbose,
+          category: this.category,
+          severity: severity.Verbose,
           message: `File response '${filePath}' completed.`
         });
       }
       catch (e) {
         // classic 404
         this.logger.log({
-          category: this.logger.category.webserver,
-          severity: this.logger.severity.Warning,
+          category: this.category,
+          severity: severity.Warning,
           message: `Error loading file '${filePath}'.`,
           respond: {
             error: e,
@@ -244,8 +248,8 @@ module.exports = class Router {
       // method not allowed for static file requests
       const err = `Request method ${context.method.request} is not allowed for that request path`;
       this.logger.log({
-        category: this.logger.category.webserver,
-        severity: this.logger.severity.Warning,
+        category: this.category,
+        severity: severity.Warning,
         message: err,
         respond: {
           error: err,
@@ -258,8 +262,8 @@ module.exports = class Router {
 
   navigateModule(context, modPath, func) {
     this.logger.log({
-      category: this.logger.category.webserver,
-      severity: this.logger.severity.Verbose,
+      category: this.category,
+      severity: severity.Verbose,
       message: `Loading module ${modPath} to call ${func}.`
     });
     let mod;
@@ -270,8 +274,8 @@ module.exports = class Router {
         // function not found
         const message = `No endpoint fount for requested module "${modPath}", function "${func}"!`;
         this.logger.log({
-          category: this.logger.category.webserver,
-          severity: this.logger.severity.Warning,
+          category: this.category,
+          severity: severity.Warning,
           message: message,
           respond: {
             error: message,
@@ -285,8 +289,8 @@ module.exports = class Router {
     } catch (e) {
       // module not found
       this.logger.log({
-        category: this.logger.category.webserver,
-        severity: this.logger.severity.Warning,
+        category: this.category,
+        severity: severity.Warning,
         message: `Module '${modPath}' not found.`,
         respond: {
           error: e,
@@ -302,8 +306,8 @@ module.exports = class Router {
     if (method === undefined) {
       const message = `Unable to process request method ${context.request.method}!`;
       this.logger.log({
-        category: this.logger.category.webserver,
-        severity: this.logger.severity.Warning,
+        category: this.category,
+        severity: severity.Warning,
         message: message,
         respond: {
           error: message,
@@ -322,8 +326,8 @@ module.exports = class Router {
       content = mod[func](context);
     } catch (e) {
       this.logger.log({
-        category: this.logger.category.webserver,
-        severity: this.logger.severity.Error,
+        category: this.category,
+        severity: severity.Error,
         message: "Error executing module handler",
         respond: {
           error: e,
@@ -338,8 +342,8 @@ module.exports = class Router {
 
   processOptions(context, allowedMethods) {
     this.logger.log({
-      category: this.logger.category.webserver,
-      severity: this.logger.severity.Verbose,
+      category: this.category,
+      severity: severity.Verbose,
       message: 'Creating OPTION response.',
     });
     const acrm = context.request.getHeader('access-control-request-method');

@@ -5,7 +5,10 @@ const http = require('http');
 const Config = require('@cyberblast/config');
 const Router = require('./router');
 const content = require('./content/load');
-const Logger = require('@cyberblast/logger');
+const {
+  Logger,
+  severity
+} = require('@cyberblast/logger');
 
 let httpServer, logger, router, config;
 
@@ -15,7 +18,7 @@ async function respondError(error, serverContext, code, message) {
     if (serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true) {
       logger.log({
         category: logger.category.webserver,
-        severity: logger.severity.Verbose,
+        severity: severity.Verbose,
         message: `Creating Error Response`
       });
       if (error != null) serverContext.response.setHeader('Error', error);
@@ -39,14 +42,14 @@ function startServer() {
     router = new Router(config.settings, logger);
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Verbose,
+      severity: severity.Verbose,
       message: `Router created.`
     });
   }
   catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Error creating router.`,
       data: e
     });
@@ -58,7 +61,7 @@ function startServer() {
     httpServer = http.createServer((request, response) => {
       logger.log({
         category: logger.category.webserver,
-        severity: logger.severity.Verbose,
+        severity: severity.Verbose,
         message: `Incoming request from '${request.socket.remoteAddress}' for '${request.method} ${request.url}'.`
       });
       const context = { server: mod };
@@ -69,13 +72,13 @@ function startServer() {
     httpServer.listen(config.settings.server.port);
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Info,
+      severity: severity.Info,
       message: `Server up & listening at http://127.0.0.1:${config.settings.server.port}/`
     });
   } catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Error creating http server at 'http://127.0.0.1:${config.settings.server.port}/'.`,
       data: e
     });
@@ -100,7 +103,7 @@ function process(context) {
   catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Unexpected Error`,
       respond: {
         error: e,
@@ -114,6 +117,21 @@ function process(context) {
 }
 
 /**
+ * Check if a log event is also meant to create a http response error page
+ */
+function logResponse(logEvent) {
+  if (logEvent.respond !== undefined) {
+    respondError(
+      logEvent.respond.error,
+      logEvent.respond.serverContext,
+      logEvent.respond.code,
+      logEvent.respond.message);
+  }
+}
+
+// TODO: wrap into web server class. Allow starting of multiple listeners.
+
+/**
  * Send a standardized error to the client.  
  * Will also be called for all internal errors.
  * @param {string|Error} error - Original error to send via header
@@ -125,19 +143,6 @@ function process(context) {
  */
 mod.respondError = async function(error, context, code = 500, message = null) {
   await respondError(error, context, code, message);
-}
-
-/**
- * Check if a log event is also meant to create a http response error page
- */
-function logResponse(logEvent) {
-  if (logEvent.respond !== undefined) {
-    respondError(
-      logEvent.respond.error,
-      logEvent.respond.serverContext,
-      logEvent.respond.code,
-      logEvent.respond.message);
-  }
 }
 
 /**
@@ -161,12 +166,12 @@ mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'lo
   catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Error loading web config file '${webConfigFile}'.`,
       data: e
     });
   }
-  startServer(config.settings);
+  startServer();
 }
 
 /**
@@ -175,7 +180,7 @@ mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'lo
 mod.stop = function() {
   logger.log({
     category: logger.category.webserver,
-    severity: logger.severity.Verbose,
+    severity: severity.Verbose,
     message: `Stopping web server.`
   });
   if (httpServer != null) httpServer.removeAllListeners();
@@ -183,7 +188,7 @@ mod.stop = function() {
     httpServer.close(() => {
       logger.log({
         category: logger.category.webserver,
-        severity: logger.severity.Info,
+        severity: severity.Info,
         message: `Server stopped.`
       });
       logger.close();
@@ -193,7 +198,7 @@ mod.stop = function() {
   } else {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Info,
+      severity: severity.Info,
       message: `Server stopped.`
     });
     logger.close();
