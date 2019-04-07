@@ -1,4 +1,16 @@
 {
   "javascript.preferences.quoteStyle": "single",
   "javascript.implicitProjectConfig.experimentalDecorators": true,
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "html.format.endWithNewline": true,
+  "html.format.extraLiners": "",
+  "html.format.indentInnerHtml": true,
+  "html.format.wrapAttributes": "aligned-multiple",
+  "javascript.implicitProjectConfig.checkJs": true,
+  "css.lint.boxModel": "warning",
+  "css.lint.compatibleVendorPrefixes": "warning",
+  "css.lint.duplicateProperties": "warning",
+  "css.lint.zeroUnits": "warning",
+  "javascript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false
 }

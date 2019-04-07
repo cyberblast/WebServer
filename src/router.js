@@ -8,11 +8,11 @@ const {
 const default404Message = 'Ooops! The file you requested was not found on the server!';
 
 function qualifyRoute(route) {
-  if(route.path.indexOf('*') > -1){
+  if (route.path.indexOf('*') > -1) {
     // its a catch all route
     route.match = 'catchall';
-    route.startsWith = route.path.replace('*','');
-  } else if(route.path.indexOf(':') > -1){
+    route.startsWith = route.path.replace('*', '');
+  } else if (route.path.indexOf(':') > -1) {
     // its a replacement route
     route.match = 'replace';
     route.parts = route.path.split('/');
@@ -22,12 +22,12 @@ function qualifyRoute(route) {
 };
 
 const match = {
-  catchall: (route, requestPath) => { 
+  catchall: (route, requestPath) => {
     let tokens = {};
-    let isMatch = ( route.path === '*' || requestPath.startsWith(route.startsWith))
-    if(isMatch) {
-      if(route.content !== undefined){
-        if(route.content.indexOf('*') > -1){
+    let isMatch = (route.path === '*' || requestPath.startsWith(route.startsWith))
+    if (isMatch) {
+      if (route.content !== undefined) {
+        if (route.content.indexOf('*') > -1) {
           tokens.content = route.content.replace('*', requestPath.substr(route.startsWith.length));
         } else {
           tokens.content = route.content;
@@ -43,14 +43,14 @@ const match = {
   },
   replace: (route, requestPath) => {
     const pathParts = requestPath.split('/');
-    if(pathParts.length !== route.parts.length) return false;
+    if (pathParts.length !== route.parts.length) return false;
     let tokens = {};
     let isMatch = true;
     route.parts.forEach((routePart, index) => {
-      if(routePart.startsWith(':')){
+      if (routePart.startsWith(':')) {
         tokens[routePart.substr(1)] = pathParts[index];
       } else {
-        if(routePart !== pathParts[index]){
+        if (routePart !== pathParts[index]) {
           isMatch = false;
         }
       }
@@ -60,7 +60,7 @@ const match = {
       tokens
     };
   },
-  exact: (route, requestPath) => { 
+  exact: (route, requestPath) => {
     return {
       isMatch: route.path === requestPath
     }
@@ -68,7 +68,7 @@ const match = {
 }
 
 module.exports = class Router {
-  constructor(settings, logger){
+  constructor(settings, logger) {
     this.logger = logger;
     this.loader = new BlobLoader();
     this.routes = settings.router.routes;
@@ -84,17 +84,17 @@ module.exports = class Router {
         const filePath = self.fileRoot + context.route.content;
         const useBlobCache = context.route.blobCache === true || self.blobCache;
         await self.navigateFile(context, filePath, useBlobCache);
-      }, 
+      },
       "module": async (context) => {
         const mod = self.apiRoot + '/' + context.route.module;
         self.navigateModule(context, mod, context.route.function);
       }
     };
-    
+
     this.navigateModuleMethods = {
       GET: (context, mod, func) => {
         const content = self.runModule(context, mod, func);
-        if(content!= null && context.response.finished === false) context.response.write(content);
+        if (content != null && context.response.finished === false) context.response.write(content);
         context.response.end();
       },
       HEAD: (context, mod, func) => {
@@ -107,18 +107,26 @@ module.exports = class Router {
         rawData = '';
         context.request.on('data', chunk => {
           rawData += chunk;
-            // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
-            // TODO: make max upload limit configurable
-            if (rawData.length > 1e6) { 
-                // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
-                self.handleError(`Request data length exceeds ${1e6} bytes. Request connection terminated.`, 413);
-                context.request.connection.destroy();
-            }
+          // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
+          // TODO: make max upload limit configurable
+          if (rawData.length > 1e6) {
+            // FLOOD ATTACK OR FAULTY CLIENT, NUKE REQUEST
+            const message = `Request data length exceeds ${1e6} bytes. Request connection terminated.`;
+            this.logger.log({
+              category: this.logger.category.webserver,
+              severity: this.logger.severity.Warning,
+              message
+            });
+            context.response.setHeader('Error', message);
+            context.response.writeHead(413);
+            context.response.end();
+            context.request.connection.destroy();
+          }
         });
-        context.request.on('end', function () {
+        context.request.on('end', function() {
           context.data = rawData;
           const content = self.runModule(context, mod, func);
-          if(content!= null && context.response.finished === false) context.response.write(content);
+          if (content != null && context.response.finished === false) context.response.write(content);
           context.response.end();
         });
       },
@@ -130,12 +138,12 @@ module.exports = class Router {
     this.routes.forEach(qualifyRoute);
   }
 
-  async navigate(context){
+  async navigate(context) {
     const requestPath = url.parse(context.request.url).pathname;
     context.client = context.request.socket.remoteAddress.split(':').pop();
     context.route = this.selectRoute(requestPath);
 
-    if(context.route === undefined){
+    if (context.route === undefined) {
       this.logger.log({
         category: this.logger.category.webserver,
         severity: this.logger.severity.Error,
@@ -151,7 +159,7 @@ module.exports = class Router {
     }
 
     const handler = this.handler[context.route.handler];
-    if(handler !== undefined){
+    if (handler !== undefined) {
       await this.handler[context.route.handler](context);
     } else {
       this.logger.log({
@@ -168,25 +176,25 @@ module.exports = class Router {
     }
   }
 
-  selectRoute(requestPath){
-    let matchResult;
+  selectRoute(requestPath) {
+    let matchResult = {};
     const matchSelector = route => {
       const selector = match[route.match];
-      if( selector === undefined ) return false;
+      if (selector === undefined) return false;
       matchResult = match[route.match](route, requestPath);
       return matchResult.isMatch;
     }
     let route = this.routes.find(matchSelector);
-    if(route !== undefined) return Object.assign({}, route, matchResult.tokens);
+    if (route !== undefined) return Object.assign({}, route, matchResult.tokens);
   }
 
-  async navigateFile(context, filePath, useBlobCache){
+  async navigateFile(context, filePath, useBlobCache) {
     this.logger.log({
       category: this.logger.category.webserver,
       severity: this.logger.severity.Verbose,
       message: `Navigating to File '${filePath}'.`
     });
-    if(!filePath){
+    if (!filePath) {
       this.logger.log({
         category: this.logger.category.webserver,
         severity: this.logger.severity.Error,
@@ -199,15 +207,15 @@ module.exports = class Router {
       });
       return;
     }
-    if('OPTIONS' === context.request.method){
+    if ('OPTIONS' === context.request.method) {
       this.processOptions(context, this.allowedFileMethods);
       return;
     }
-    if(this.allowedFileMethods.includes(context.request.method)){   
-      try{
+    if (this.allowedFileMethods.includes(context.request.method)) {
+      try {
         const file = await this.loader.get(filePath, useBlobCache);
-        context.response.writeHead(200, {'Content-Type': contentTypeByExtension(filePath)});
-        if(context.request.method !== 'HEAD')
+        context.response.writeHead(200, { 'Content-Type': contentTypeByExtension(filePath) });
+        if (context.request.method !== 'HEAD')
           context.response.write(file);
         context.response.end();
         this.logger.log({
@@ -216,8 +224,7 @@ module.exports = class Router {
           message: `File response '${filePath}' completed.`
         });
       }
-      catch(e)
-      {
+      catch (e) {
         // classic 404
         this.logger.log({
           category: this.logger.category.webserver,
@@ -249,7 +256,7 @@ module.exports = class Router {
     }
   }
 
-  navigateModule(context, modPath, func){
+  navigateModule(context, modPath, func) {
     this.logger.log({
       category: this.logger.category.webserver,
       severity: this.logger.severity.Verbose,
@@ -259,7 +266,7 @@ module.exports = class Router {
     try {
       const normalized = path.resolve(modPath).toLowerCase();
       mod = require(normalized);
-      if(mod === undefined || mod[func] === undefined){
+      if (mod === undefined || mod[func] === undefined) {
         // function not found
         const message = `No endpoint fount for requested module "${modPath}", function "${func}"!`;
         this.logger.log({
@@ -275,7 +282,7 @@ module.exports = class Router {
         });
         return;
       }
-    } catch(e){
+    } catch (e) {
       // module not found
       this.logger.log({
         category: this.logger.category.webserver,
@@ -292,7 +299,7 @@ module.exports = class Router {
       return;
     }
     const method = this.navigateModuleMethods[context.request.method];
-    if(method === undefined){
+    if (method === undefined) {
       const message = `Unable to process request method ${context.request.method}!`;
       this.logger.log({
         category: this.logger.category.webserver,
@@ -309,17 +316,27 @@ module.exports = class Router {
     method(context, mod, func);
   }
 
-  runModule(context, mod, func){
+  runModule(context, mod, func) {
     let content = null;
-    try{
+    try {
       content = mod[func](context);
-    }catch(e){
-      this.handleError(e, context, 500);
+    } catch (e) {
+      this.logger.log({
+        category: this.logger.category.webserver,
+        severity: this.logger.severity.Error,
+        message: "Error executing module handler",
+        respond: {
+          error: e,
+          serverContext: context,
+          code: 500
+        },
+        data: e
+      });
     }
     return content;
   }
 
-  processOptions(context, allowedMethods){
+  processOptions(context, allowedMethods) {
     this.logger.log({
       category: this.logger.category.webserver,
       severity: this.logger.severity.Verbose,
@@ -328,22 +345,22 @@ module.exports = class Router {
     const acrm = context.request.getHeader('access-control-request-method');
     const acrh = context.request.headers['access-control-request-headers'];
     const origin = context.request.headers['origin'];
-    if(acrm === undefined && acrh === undefined && origin === undefined){
+    if (acrm === undefined && acrh === undefined && origin === undefined) {
       // not a cors preflight
       context.response.setHeader('Allow', allowedMethods);
     } else {
       // cors preflight
       context.response.setHeader("Access-Control-Allow-Credentials", "false");
-      if(origin !== null){
+      if (origin !== null) {
         // TODO: make allowed cors origin configurable
         context.response.setHeader('Access-Control-Allow-Origin', origin);
-        if(origin !== '*') // Add Origin to Vary Header, if Access-Control-Allow-Origin != * or null
+        if (origin !== '*') // Add Origin to Vary Header, if Access-Control-Allow-Origin != * or null
           context.response.setHeader('Vary', 'Origin');
       }
-      if(acrm !== null){
+      if (acrm !== null) {
         context.response.setHeader('Access-Control-Allow-Methods', allowedMethods);
       }
-      if(acrh !== null){
+      if (acrh !== null) {
         // TODO: make allowed headers configurable
         context.response.setHeader('Access-Control-Allow-Headers', acrh);
       }

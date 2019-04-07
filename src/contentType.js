@@ -1,5 +1,3 @@
-module.exports = mod = {};
-
 const types = {
   // credits go to https://www.ryadel.com/en/get-file-content-mime-type-from-extension-asp-net-mvc-core/
   "323": "text/h323",
@@ -601,8 +599,12 @@ const types = {
   "zip": "application/zip"
 }
 
-mod.contentTypeByExtension = function(fileName){
+const contentTypeByExtension = function(fileName) {
   const end = fileName.split('.').pop();
   const t = types[end];
   return t === undefined ? "application/octet-stream" : t;
 }
+
+module.exports = {
+  contentTypeByExtension
+};
