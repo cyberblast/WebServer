@@ -1,6 +1,6 @@
 {
   "name": "@cyberblast/webserver",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A minimal node-based web server",
   "author": "cyberblast <git@cyberblast.org>",
   "license": "MIT",
