@@ -1,4 +1,19 @@
 {
+  "css.lint.boxModel": "warning",
+  "css.lint.compatibleVendorPrefixes": "warning",
+  "css.lint.duplicateProperties": "warning",
+  "css.lint.zeroUnits": "warning",
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "files.eol": "\r\n",
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "html.format.endWithNewline": true,
+  "html.format.extraLiners": "",
+  "html.format.indentInnerHtml": true,
+  "html.format.wrapAttributes": "aligned-multiple",
   "javascript.preferences.quoteStyle": "single",
   "javascript.implicitProjectConfig.experimentalDecorators": true,
+  "javascript.implicitProjectConfig.checkJs": true,
+  "javascript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false
 }

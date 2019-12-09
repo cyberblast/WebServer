@@ -5,48 +5,51 @@ const http = require('http');
 const Config = require('@cyberblast/config');
 const Router = require('./router');
 const content = require('./content/load');
-const Logger = require('@cyberblast/logger');
+const {
+  Logger,
+  severity
+} = require('@cyberblast/logger');
 
 let httpServer, logger, router, config;
 
-async function respondError(error, serverContext, code, message){
-  if(serverContext == null) return;
-  if(serverContext.response != null){
-    if( serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true){
+async function respondError(error, serverContext, code, message) {
+  if (serverContext == null) return;
+  if (serverContext.response != null) {
+    if (serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true) {
       logger.log({
         category: logger.category.webserver,
-        severity: logger.severity.Verbose,
+        severity: severity.Verbose,
         message: `Creating Error Response`
       });
-      if(error != null) serverContext.response.setHeader('Error', error);
-      if(code != null) serverContext.response.writeHead(code);
-      if(serverContext.request.method !== 'HEAD') {
+      if (error != null) serverContext.response.setHeader('Error', error);
+      if (code != null) serverContext.response.writeHead(code);
+      if (serverContext.request.method !== 'HEAD') {
         const status = code ? `${code} ${serverContext.response.statusMessage}` : '';
         const errPage = await content('errorPage.html');
-        if(errPage){
+        if (errPage) {
           const errMarkup = errPage.toString().replace('STATUS', status).replace('ERROR', message || '');
           serverContext.response.write(errMarkup);
         } else serverContext.response.write(`${status}<br/>${message}`);
       }
     }
-    if(serverContext.response.finished !== true) serverContext.response.end();
+    if (serverContext.response.finished !== true) serverContext.response.end();
   }
 }
 
-function startServer(){
+function startServer() {
   // Create Router
-  try{
+  try {
     router = new Router(config.settings, logger);
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Verbose,
+      severity: severity.Verbose,
       message: `Router created.`
     });
   }
-  catch(e){
+  catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Error creating router.`,
       data: e
     });
@@ -54,11 +57,11 @@ function startServer(){
   }
 
   // Create Server
-  try{
+  try {
     httpServer = http.createServer((request, response) => {
       logger.log({
         category: logger.category.webserver,
-        severity: logger.severity.Verbose,
+        severity: severity.Verbose,
         message: `Incoming request from '${request.socket.remoteAddress}' for '${request.method} ${request.url}'.`
       });
       const context = { server: mod };
@@ -69,13 +72,13 @@ function startServer(){
     httpServer.listen(config.settings.server.port);
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Info,
+      severity: severity.Info,
       message: `Server up & listening at http://127.0.0.1:${config.settings.server.port}/`
     });
-  } catch(e){
+  } catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Error creating http server at 'http://127.0.0.1:${config.settings.server.port}/'.`,
       data: e
     });
@@ -83,107 +86,121 @@ function startServer(){
   }
 }
 
-function process(context){
+function process(context) {
   // set static headers
   context.response.setHeader('Server', 'cyberblast');
   const headers = config.settings.server.headers;
-  if(headers !== undefined){
-    for(let head in headers){
+  if (headers !== undefined) {
+    for (let head in headers) {
       const value = headers[head];
       context.response.setHeader(head, value);
     }
   }
   // process request
-  try{
+  try {
     router.navigate(context);
   }
-  catch(e){
+  catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Unexpected Error`,
       respond: {
         error: e,
         serverContext: context,
         code: 500,
         message: `Unexpected Error`
-      }, 
+      },
       data: e
     });
   }
 }
 
 /**
+ * Check if a log event is also meant to create a http response error page
+ */
+function logResponse(logEvent) {
+  if (logEvent.respond !== undefined) {
+    respondError(
+      logEvent.respond.error,
+      logEvent.respond.serverContext,
+      logEvent.respond.code,
+      logEvent.respond.message);
+  }
+}
+
+// TODO: wrap into web server class. Allow starting of multiple listeners.
+
+/**
  * Send a standardized error to the client.  
  * Will also be called for all internal errors.
  * @param {string|Error} error - Original error to send via header
- * @param {http.ServerResponse} response - Current response object
+ * @param {any} context - Execution context
  * @param {number} [code] - Http response status code  
  * default = 500
  * @param {string} [message] - Additional message to add to the response body, displayed on the page  
  * default = null
  */
-mod.respondError = async function(error, serverContext, code = 500, message = null){
-  await respondError(error, serverContext, code, message);
-}
-
-/**
- * Check if a log event is also meant to create a http response error page
- */
-function logResponse(logEvent){
-  if(logEvent.respond !== undefined){
-    respondError(
-      logEvent.respond.error, 
-      logEvent.respond.serverContext, 
-      logEvent.respond.code, 
-      logEvent.respond.message);
-  }
+mod.respondError = async function(error, context, code = 500, message = null) {
+  await respondError(error, context, code, message);
 }
 
 /**
  * Start web server. 
- * @param {string} [configFile] - specify a custom path to a config file.  
+ * @param {string} [webConfigFile] - path to config file for web server settings.  
  * default: 'webserver.json'
- * @param {boolean} [forceReload] - reload settings file every time you call start.  
- * default: false
+ * @param {string} [logConfigFile] - path to config file for logging settings.  
+ * default: 'log.json'
  */
-mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'log.json'){
+mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'log.json') {
   logger = new Logger(logConfigFile);
   await logger.init();
   logger.defineCategory('webserver');
   logger.onLog(logResponse);
   mod.logger = logger;
 
-  try{
+  try {
     config = new Config(webConfigFile);
     await config.load();
   }
-  catch(e){
+  catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: logger.severity.Error,
+      severity: severity.Error,
       message: `Error loading web config file '${webConfigFile}'.`,
       data: e
     });
   }
-  startServer(config.settings);
+  startServer();
 }
 
 /**
  * Stop web server. 
- * @param {boolean} [abortProcess] - Also abort Node process
  */
-mod.stop = function(){
+mod.stop = function() {
   logger.log({
     category: logger.category.webserver,
-    severity: logger.severity.Verbose,
+    severity: severity.Verbose,
     message: `Stopping web server.`
   });
-  if(httpServer != null) httpServer.removeAllListeners();
-  if(httpServer != null) httpServer.close();
-  logger.log({
-    category: logger.category.webserver,
-    severity: logger.severity.Info,
-    message: `Server stopped.`
-  });
+  if (httpServer != null) httpServer.removeAllListeners();
+  if (httpServer != null) {
+    httpServer.close(() => {
+      logger.log({
+        category: logger.category.webserver,
+        severity: severity.Info,
+        message: `Server stopped.`
+      });
+      logger.close();
+      httpServer.unref();
+      httpServer = null;
+    });
+  } else {
+    logger.log({
+      category: logger.category.webserver,
+      severity: severity.Info,
+      message: `Server stopped.`
+    });
+    logger.close();
+  }
 }
