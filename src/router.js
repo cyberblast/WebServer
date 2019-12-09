@@ -272,7 +272,7 @@ module.exports = class Router {
       mod = require(normalized);
       if (mod === undefined || mod[func] === undefined) {
         // function not found
-        const message = `No endpoint fount for requested module "${modPath}", function "${func}"!`;
+        const message = `No endpoint found for requested module "${modPath}", function "${func}"!`;
         this.logger.log({
           category: this.category,
           severity: severity.Warning,
