@@ -97,14 +97,14 @@ module.exports = class Router {
 
     this.navigateModuleMethods = {
       GET: (context, mod, func) => {
-        const content = self.runModule(context, mod, func);
-        if (content != null && context.response.finished === false) context.response.write(content);
-        context.response.end();
+        self.runModule(context, mod, func).then(content => {
+          if (content != null && context.response.finished === false) context.response.write(content);
+          context.response.end();
+        });
       },
       HEAD: (context, mod, func) => {
         // dont set body content
-        self.runModule(context, mod, func);
-        context.response.end();
+        self.runModule(context, mod, func).then(() => context.response.end());
       },
       POST: (context, mod, func) => {
         let rawData;
@@ -129,9 +129,10 @@ module.exports = class Router {
         });
         context.request.on('end', function() {
           context.data = rawData;
-          const content = self.runModule(context, mod, func);
-          if (content != null && context.response.finished === false) context.response.write(content);
-          context.response.end();
+          self.runModule(context, mod, func).then(content => {
+            if (content != null && context.response.finished === false) context.response.write(content);
+            context.response.end();
+          });
         });
       },
       OPTIONS: (context) => {
@@ -320,7 +321,7 @@ module.exports = class Router {
     method(context, mod, func);
   }
 
-  runModule(context, mod, func) {
+  async runModule(context, mod, func) {
     let content = null;
     try {
       content = mod[func](context);
@@ -337,7 +338,27 @@ module.exports = class Router {
         data: e
       });
     }
-    return content;
+
+    if (typeof content == 'string')
+      return content;
+    else {
+      try {
+        await content;
+      } catch (e) {
+        this.logger.log({
+          category: this.category,
+          severity: severity.Error,
+          message: "Error executing module handler",
+          respond: {
+            error: e,
+            serverContext: context,
+            code: 500
+          },
+          data: e
+        });
+      }
+      return content;
+    }
   }
 
   processOptions(context, allowedMethods) {
