@@ -322,9 +322,8 @@ module.exports = class Router {
   }
 
   async runModule(context, mod, func) {
-    let content = null;
     try {
-      content = mod[func](context);
+      return await mod[func](context);
     } catch (e) {
       this.logger.log({
         category: this.category,
@@ -337,27 +336,6 @@ module.exports = class Router {
         },
         data: e
       });
-    }
-
-    if (typeof content == 'string')
-      return content;
-    else {
-      try {
-        await content;
-      } catch (e) {
-        this.logger.log({
-          category: this.category,
-          severity: severity.Error,
-          message: "Error executing module handler",
-          respond: {
-            error: e,
-            serverContext: context,
-            code: 500
-          },
-          data: e
-        });
-      }
-      return content;
     }
   }
 
