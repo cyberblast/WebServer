@@ -25,7 +25,17 @@ async function respondError(error, serverContext, code, message) {
       if (code != null) serverContext.response.writeHead(code);
       if (serverContext.request.method !== 'HEAD') {
         const status = code ? `${code} ${serverContext.response.statusMessage}` : '';
-        const errPage = await content('errorPage.html');
+        let errPage;
+        try {
+          errPage = await content('errorPage.html')
+        } catch (e) {
+          logger.log({
+            category: logger.category.webserver,
+            severity: severity.Error,
+            message: `Error loading error page`,
+            data: e
+          });
+        }
         if (errPage) {
           const errMarkup = errPage.toString().replace('STATUS', status).replace('ERROR', message || '');
           serverContext.response.write(errMarkup);
@@ -89,6 +99,7 @@ function startServer() {
 function process(context) {
   // set static headers
   context.response.setHeader('Server', 'cyberblast');
+  context.logger = logger;
   const headers = config.settings.server.headers;
   if (headers !== undefined) {
     for (let head in headers) {
