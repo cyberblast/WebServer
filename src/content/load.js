@@ -5,7 +5,7 @@ const cache = {};
 
 module.exports = async function(filePath) {
   return new Promise((resolve, reject) => {
-    const normalized = path.join('./src/content/', filePath);
+    const normalized = path.join(__dirname, filePath);
     if (cache[normalized] === undefined) {
       fs.readFile(normalized, function(fsError, data) {
         if (fsError) {
