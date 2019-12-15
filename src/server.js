@@ -158,7 +158,7 @@ function logResponse(logEvent) {
  * Will also be called for all internal errors.
  * @method respondError
  * @param {string|Error} error - Original error to send via header
- * @param {any} context - Execution context
+ * @param {ServerContext} context - Execution context
  * @param {number} [code] - Http response status code  
  * default = 500
  * @param {string} [message] - Additional message to add to the response body, displayed on the page  
