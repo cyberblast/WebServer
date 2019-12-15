@@ -1,2 +1,11 @@
-/test
+/node_modules
 /.vscode
+
+/test
+/dist
+
+.gitignore
+.travis.yml
+
+.tsconfig.json
+.jsconfig.json
