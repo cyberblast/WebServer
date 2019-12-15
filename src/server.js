@@ -12,6 +12,17 @@ const {
 
 let httpServer, logger, router, config;
 
+/**
+ * @typedef {object} ServerContext - Call-specific context
+ * @property {object} server
+ * @property {IncominMessage} request
+ * @property {ServerResponse} response
+ * @property {Logger} logger
+ * @property {string} client
+ * @property {any} route - route node from config file
+ * @property {string | Buffer} data - request post body
+ */
+
 async function respondError(error, serverContext, code, message) {
   if (serverContext == null) return;
   if (serverContext.response != null) {
@@ -145,6 +156,7 @@ function logResponse(logEvent) {
 /**
  * Send a standardized error to the client.  
  * Will also be called for all internal errors.
+ * @method respondError
  * @param {string|Error} error - Original error to send via header
  * @param {any} context - Execution context
  * @param {number} [code] - Http response status code  
@@ -158,6 +170,7 @@ mod.respondError = async function(error, context, code = 500, message = null) {
 
 /**
  * Start web server. 
+ * @method start
  * @param {string} [webConfigFile] - path to config file for web server settings.  
  * default: 'webserver.json'
  * @param {string} [logConfigFile] - path to config file for logging settings.  
@@ -187,6 +200,7 @@ mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'lo
 
 /**
  * Stop web server. 
+ * @method stop
  */
 mod.stop = function() {
   logger.log({
