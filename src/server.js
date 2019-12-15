@@ -7,7 +7,7 @@ const Router = require('./router');
 const content = require('./content/load');
 const {
   Logger,
-  severity
+  Severity
 } = require('@cyberblast/logger');
 
 let httpServer, logger, router, config;
@@ -29,7 +29,7 @@ async function respondError(error, serverContext, code, message) {
     if (serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true) {
       logger.log({
         category: logger.category.webserver,
-        severity: severity.Verbose,
+        severity: Severity.Verbose,
         message: `Creating Error Response`
       });
       if (error != null) serverContext.response.setHeader('Error', error);
@@ -42,7 +42,7 @@ async function respondError(error, serverContext, code, message) {
         } catch (e) {
           logger.log({
             category: logger.category.webserver,
-            severity: severity.Error,
+            severity: Severity.Error,
             message: `Error loading error page`,
             data: e
           });
@@ -63,14 +63,14 @@ function startServer() {
     router = new Router(config.settings, logger);
     logger.log({
       category: logger.category.webserver,
-      severity: severity.Verbose,
+      severity: Severity.Verbose,
       message: `Router created.`
     });
   }
   catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: severity.Error,
+      severity: Severity.Error,
       message: `Error creating router.`,
       data: e
     });
@@ -82,7 +82,7 @@ function startServer() {
     httpServer = http.createServer((request, response) => {
       logger.log({
         category: logger.category.webserver,
-        severity: severity.Verbose,
+        severity: Severity.Verbose,
         message: `Incoming request from '${request.socket.remoteAddress}' for '${request.method} ${request.url}'.`
       });
       const context = { server: mod };
@@ -93,13 +93,13 @@ function startServer() {
     httpServer.listen(config.settings.server.port);
     logger.log({
       category: logger.category.webserver,
-      severity: severity.Info,
+      severity: Severity.Info,
       message: `Server up & listening at http://127.0.0.1:${config.settings.server.port}/`
     });
   } catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: severity.Error,
+      severity: Severity.Error,
       message: `Error creating http server at 'http://127.0.0.1:${config.settings.server.port}/'.`,
       data: e
     });
@@ -125,7 +125,7 @@ function process(context) {
   catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: severity.Error,
+      severity: Severity.Error,
       message: `Unexpected Error`,
       respond: {
         error: e,
@@ -190,7 +190,7 @@ mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'lo
   catch (e) {
     logger.log({
       category: logger.category.webserver,
-      severity: severity.Error,
+      severity: Severity.Error,
       message: `Error loading web config file '${webConfigFile}'.`,
       data: e
     });
@@ -205,7 +205,7 @@ mod.start = async function(webConfigFile = 'webserver.json', logConfigFile = 'lo
 mod.stop = function() {
   logger.log({
     category: logger.category.webserver,
-    severity: severity.Verbose,
+    severity: Severity.Verbose,
     message: `Stopping web server.`
   });
   if (httpServer != null) httpServer.removeAllListeners();
@@ -213,7 +213,7 @@ mod.stop = function() {
     httpServer.close(() => {
       logger.log({
         category: logger.category.webserver,
-        severity: severity.Info,
+        severity: Severity.Info,
         message: `Server stopped.`
       });
       logger.close();
@@ -223,7 +223,7 @@ mod.stop = function() {
   } else {
     logger.log({
       category: logger.category.webserver,
-      severity: severity.Info,
+      severity: Severity.Info,
       message: `Server stopped.`
     });
     logger.close();
