@@ -5,7 +5,7 @@ const {
   contentTypeByExtension
 } = require('./contentType');
 const {
-  severity
+  Severity
 } = require('@cyberblast/logger');
 
 const default404Message = 'Ooops! The file you requested was not found on the server!';
@@ -118,7 +118,7 @@ module.exports = class Router {
             const message = `Request data length exceeds ${1e6} bytes. Request connection terminated.`;
             this.logger.log({
               category: this.category,
-              severity: severity.Warning,
+              severity: Severity.Warning,
               message
             });
             context.response.setHeader('Error', message);
@@ -151,7 +151,7 @@ module.exports = class Router {
     if (context.route === undefined) {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
+        severity: Severity.Error,
         message: `No route found for path "${requestPath}"!`,
         respond: {
           error: `No route found for path "${requestPath}"!`,
@@ -169,7 +169,7 @@ module.exports = class Router {
     } else {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
+        severity: Severity.Error,
         message: `Unknown route handler "${context.route.handler}"`,
         respond: {
           error: `Unknown route handler "${context.route.handler}"`,
@@ -196,13 +196,13 @@ module.exports = class Router {
   async navigateFile(context, filePath, useBlobCache) {
     this.logger.log({
       category: this.category,
-      severity: severity.Verbose,
+      severity: Severity.Verbose,
       message: `Navigating to File '${filePath}'.`
     });
     if (!filePath) {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
+        severity: Severity.Error,
         message: 'Unable to handle empty path request!',
         respond: {
           error: 'Unable to handle empty path request!',
@@ -225,7 +225,7 @@ module.exports = class Router {
         context.response.end();
         this.logger.log({
           category: this.category,
-          severity: severity.Verbose,
+          severity: Severity.Verbose,
           message: `File response '${filePath}' completed.`
         });
       }
@@ -233,7 +233,7 @@ module.exports = class Router {
         // classic 404
         this.logger.log({
           category: this.category,
-          severity: severity.Warning,
+          severity: Severity.Warning,
           message: `Error loading file '${filePath}'.`,
           respond: {
             error: e,
@@ -250,7 +250,7 @@ module.exports = class Router {
       const err = `Request method ${context.method.request} is not allowed for that request path`;
       this.logger.log({
         category: this.category,
-        severity: severity.Warning,
+        severity: Severity.Warning,
         message: err,
         respond: {
           error: err,
@@ -264,7 +264,7 @@ module.exports = class Router {
   navigateModule(context, modPath, func) {
     this.logger.log({
       category: this.category,
-      severity: severity.Verbose,
+      severity: Severity.Verbose,
       message: `Loading module ${modPath} to call ${func}.`
     });
     let mod;
@@ -276,7 +276,7 @@ module.exports = class Router {
         const message = `No endpoint found for requested module "${modPath}", function "${func}"!`;
         this.logger.log({
           category: this.category,
-          severity: severity.Warning,
+          severity: Severity.Warning,
           message: message,
           respond: {
             error: message,
@@ -291,7 +291,7 @@ module.exports = class Router {
       // module not found
       this.logger.log({
         category: this.category,
-        severity: severity.Warning,
+        severity: Severity.Warning,
         message: `Module '${modPath}' not found.`,
         respond: {
           error: e,
@@ -308,7 +308,7 @@ module.exports = class Router {
       const message = `Unable to process request method ${context.request.method}!`;
       this.logger.log({
         category: this.category,
-        severity: severity.Warning,
+        severity: Severity.Warning,
         message: message,
         respond: {
           error: message,
@@ -327,7 +327,7 @@ module.exports = class Router {
     } catch (e) {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
+        severity: Severity.Error,
         message: "Error executing module handler",
         respond: {
           error: e,
@@ -342,7 +342,7 @@ module.exports = class Router {
   processOptions(context, allowedMethods) {
     this.logger.log({
       category: this.category,
-      severity: severity.Verbose,
+      severity: Severity.Verbose,
       message: 'Creating OPTION response.',
     });
     const acrm = context.request.getHeader('access-control-request-method');
