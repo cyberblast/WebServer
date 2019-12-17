@@ -1,5 +1,6 @@
 const url = require('url');
 const path = require('path');
+const fs = require("fs");
 const BlobLoader = require('./BlobLoader');
 const {
   contentTypeByExtension
@@ -70,6 +71,12 @@ const match = {
   }
 }
 
+const getDirectories = source => {
+  return fs.readdirSync(source, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name);
+}
+
 module.exports = class Router {
   constructor(settings, logger) {
     this.logger = logger;
@@ -83,14 +90,44 @@ module.exports = class Router {
     this.allowedFileMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
     const self = this;
 
+    if (settings.router.modulesRoot !== undefined) {
+      const modules = getDirectories(settings.router.modulesRoot);
+      if (settings.router.webmodule === undefined) {
+        settings.router.webmodule = {};
+      }
+      modules.forEach(mod => {
+        if (settings.router.webmodule[mod] === undefined) {
+          settings.router.webmodule[mod] = `${settings.router.modulesRoot}/${mod}`;
+        }
+      });
+    }
+
+    if (settings.router.webmodule !== undefined) {
+      Object.keys(settings.router.webmodule).forEach(name => {
+        const path = settings.router.webmodule[name];
+        this.routes.unshift({
+          handler: "module",
+          path: `/$api/${name}/:function`,
+          module: path + "/api.js",
+          absolut: true
+        });
+        this.routes.unshift({
+          handler: "file",
+          path: "/$component/" + name,
+          content: path + "/component.mjs",
+          absolut: true
+        });
+      });
+    }
+
     this.handler = {
       "file": async (context) => {
-        const filePath = self.fileRoot + context.route.content;
+        const filePath = (context.route.absolut === true ? '' : self.fileRoot) + context.route.content;
         const useBlobCache = context.route.blobCache === true || self.blobCache;
         await self.navigateFile(context, filePath, useBlobCache);
       },
       "module": async (context) => {
-        const mod = self.apiRoot + '/' + context.route.module;
+        const mod = (context.route.absolut === true ? '' : (self.apiRoot + '/')) + context.route.module;
         self.navigateModule(context, mod, context.route.function);
       }
     };

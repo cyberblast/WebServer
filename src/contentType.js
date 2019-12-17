@@ -254,6 +254,7 @@ const types = {
   "mid": "audio/mid",
   "midi": "audio/mid",
   "mix": "application/octet-stream",
+  "mjs": "application/javascript",
   "mk": "text/plain",
   "mmf": "application/x-smaf",
   "mno": "text/xml",
