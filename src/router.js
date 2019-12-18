@@ -106,27 +106,33 @@ module.exports = class Router {
       Object.keys(settings.router.webmodule).forEach(name => {
         const path = settings.router.webmodule[name];
         this.routes.unshift({
-          handler: "module",
+          handler: 'module',
           path: `/$api/${name}/:function`,
-          module: path + "/api.js",
+          module: path + '/api.js',
           absolut: true
         });
         this.routes.unshift({
-          handler: "file",
-          path: "/$component/" + name,
-          content: path + "/component.mjs",
+          handler: 'file',
+          path: '/$component/' + name + '/*',
+          content: path + '/*',
+          absolut: true
+        });
+        this.routes.unshift({
+          handler: 'file',
+          path: '/$component/' + name,
+          content: path + '/component.mjs',
           absolut: true
         });
       });
     }
 
     this.handler = {
-      "file": async (context) => {
+      'file': async (context) => {
         const filePath = (context.route.absolut === true ? '' : self.fileRoot) + context.route.content;
         const useBlobCache = context.route.blobCache === true || self.blobCache;
         await self.navigateFile(context, filePath, useBlobCache);
       },
-      "module": async (context) => {
+      'module': async (context) => {
         const mod = (context.route.absolut === true ? '' : (self.apiRoot + '/')) + context.route.module;
         self.navigateModule(context, mod, context.route.function);
       }
