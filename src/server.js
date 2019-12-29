@@ -102,7 +102,7 @@ function WebServer(webConfigFile = 'webserver.json', logConfigFile = 'log.json')
     });
   }.bind(this);
 
-  function process(context) {
+  async function process(context) {
     // set static headers
     context.response.setHeader('Server', 'cyberblast');
     context.logger = logger;
@@ -115,7 +115,7 @@ function WebServer(webConfigFile = 'webserver.json', logConfigFile = 'log.json')
     }
     // process request
     try {
-      router.navigate(context);
+      await router.navigate(context);
     }
     catch (e) {
       logger.log({

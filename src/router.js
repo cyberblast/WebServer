@@ -107,7 +107,7 @@ module.exports = class Router {
       Object.keys(settings.router.webmodule).forEach(name => {
         const path = settings.router.webmodule[name];
         this.routes.unshift({
-          handler: 'module',
+          handler: 'api',
           path: `/$api/${name}/:function`,
           module: path + '/api.js',
           absolut: true
