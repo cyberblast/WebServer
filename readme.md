@@ -10,7 +10,7 @@ A minimal node-based web server
 * GET static files  
   like html markup, stylesheets, images etc...
 * GET content from js functions  
-  Call any static function in any module. 
+  Call a static function in a js file / node module on the server. 
 * POST to js functions  
   Just like GET but with added payload...
 * Define access routes  
@@ -41,16 +41,16 @@ server.start().then(() => {
   // up and running...
 });
 ```
-Route requests to custom js handlers (see configuration section for routing details)
+Route requests to custom api handlers (see configuration section for routing details)
 ```js
-// this is a sample custom js handler:
+// this is a sample custom api handler:
 static greetIp(serverContext){
   return 'Hello ' + serverContext.request.socket.remoteAddress.split(':').pop();
 }
 ```
 Respond with a standardized error page
 ```js
-// another a sample custom js handler:
+// another a sample custom api handler:
 static alwaysBroken(serverContext){
   serverContext.server.respondError(
     'Explicit developer error message', 
@@ -85,12 +85,13 @@ Sample webserver.json file
     "blobCache": true
   },
   "router": {
-    "fileRoot": "./test/webRoot",
-    "apiRoot": "./test/api",
+    "fileRoot": "./static",
+    "apiRoot": "./api",
+    "modulesRoot": "./webmodule",
     "routes": [
       { "path": "/", "handler": "file", "content": "/index.html" },
-      { "path": "/api/server/ip", "handler": "module", "module": "server.js", "function": "ip" },
-      { "path": "/api/:module/:function", "handler": "module"},
+      { "path": "/api/server/ip", "handler": "api", "module": "server.js", "function": "ip" },
+      { "path": "/api/:module/:function", "handler": "api"},
       { "path": "/other/*", "handler": "file", "content": "/subFolder/*" },
       { "path": "*", "handler": "file", "blobCache": false}
     ]
@@ -100,16 +101,17 @@ Sample webserver.json file
 * server.port: Port for the webserver to listen at
 * server.blobCache: Activate blob caching for all file routes (may be overridden on a per route base).
 * router.fileRoot: A base path for ALL file routes (optional)
-* router.apiRoot: A base path for ALL js files, callable as api function (optional)
+* router.apiRoot: A base path for ALL js files (except files under *modulesRoot*), callable as api function (optional)
+* router.modulesRoot: A root path for webmodule directories/packages. Such modules need to fit a certain pattern to work properly. See section *webmodules* for more details.
 * router.routes: List of route rules. First path match will get executed (top to bottom).
-* router.routes[x].path: URL path. Request url path must match to activate route rule. Filehandler rules may contain an asterisk (*) at the end to specify catch all rules. Modulehandler rules may define token placeholders for module (:module) and function (:function). 
-* router.routes[x].handler: "file" or "module". 
+* router.routes[x].path: URL path. Request url path must match to activate route rule. Filehandler rules may contain an asterisk (*) at the end to specify catch all rules. Apihandler rules may define token placeholders for module (:module) and function (:function). 
+* router.routes[x].handler: "file" or "api". 
   * file: A rule to access static file content
-  * module: A rule to access a js function
+  * api: A rule to access a js function
 * router.routes[x].content: Valid for filehandler rules only. Specify a specific file (or path for catch all rules) to load.
 * router.routes[x].blobCache: Valid for filehandler rules only. Activate blob caching for all files loaded by this route rule.
-* router.routes[x].module: Valid for modulehandler rules only. Specify js file to load as module. 
-* router.routes[x].function: Valid for modulehandler rules only. Specify name of static function to call.
+* router.routes[x].module: Valid for apihandler rules only. Specify js file to load as module. 
+* router.routes[x].function: Valid for apihandler rules only. Specify name of static function to call.
 
 Sample log.json file: 
 ```json
@@ -122,6 +124,32 @@ Sample log.json file:
   ]
 }
 ```
+## Webmodules
+
+Besides allowing to serve static files and server api functions separate from each other, sometimes it's much better to ship things grouped together. This allows to develop custom pluggable module extensions, containing of client and server side code alike. 
+
+Every web module must be contained within a separate directory. Such module directory may contain: 
+* api.js  
+main entry for server side code (api interface)
+* component.mjs  
+client side script module
+* additional files and directories
+
+To make such modules work, a *modulesRoot* path must be configured, containing all module directories.  
+Web modules will ignore all other configured routes, but can be addressed slightly different: 
+
+* /$api/\<name of web module\>/\<name of static function\>  
+to access functions within api.js  
+*Following example utilizes a custom HTML component to render server response (not subject here)*
+```html
+<server-snippet src="/$api/myComp/getStuff"></server-snippet>
+```
+* /$component/\<name of web module\>  
+to load component.js on client side
+```html
+<script type="module" src="/$component/myComp"></script>
+```
+A working example can be found in the [MaumauServer repository](https://github.com/cyberblast/MaumauServer), a project based upon this web server.
 
 ## Legal
 

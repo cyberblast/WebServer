@@ -86,7 +86,7 @@ module.exports = class Router {
     this.fileRoot = settings.router.fileRoot || '';
     this.apiRoot = settings.router.apiRoot || '';
     this.blobCache = settings.server.blobCache || false;
-    this.allowedModuleMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
+    this.allowedApiMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
     this.allowedFileMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
     const self = this;
 
@@ -132,22 +132,22 @@ module.exports = class Router {
         const useBlobCache = context.route.blobCache === true || self.blobCache;
         await self.navigateFile(context, filePath, useBlobCache);
       },
-      'module': async (context) => {
+      'api': async (context) => {
         const mod = (context.route.absolut === true ? '' : (self.apiRoot + '/')) + context.route.module;
-        self.navigateModule(context, mod, context.route.function);
+        self.navigateApi(context, mod, context.route.function);
       }
     };
 
-    this.navigateModuleMethods = {
+    this.navigateApiMethods = {
       GET: (context, mod, func) => {
-        self.runModule(context, mod, func).then(content => {
+        self.runApi(context, mod, func).then(content => {
           if (content != null && context.response.finished === false) context.response.write(content);
           context.response.end();
         });
       },
       HEAD: (context, mod, func) => {
         // dont set body content
-        self.runModule(context, mod, func).then(() => context.response.end());
+        self.runApi(context, mod, func).then(() => context.response.end());
       },
       POST: (context, mod, func) => {
         let rawData;
@@ -172,14 +172,14 @@ module.exports = class Router {
         });
         context.request.on('end', function() {
           context.data = rawData;
-          self.runModule(context, mod, func).then(content => {
+          self.runApi(context, mod, func).then(content => {
             if (content != null && context.response.finished === false) context.response.write(content);
             context.response.end();
           });
         });
       },
       OPTIONS: (context) => {
-        self.processOptions(context, this.allowedModuleMethods);
+        self.processOptions(context, this.allowedApiMethods);
       }
     };
 
@@ -304,11 +304,11 @@ module.exports = class Router {
     }
   }
 
-  navigateModule(context, modPath, func) {
+  navigateApi(context, modPath, func) {
     this.logger.log({
       category: this.category,
       severity: Severity.Verbose,
-      message: `Loading module ${modPath} to call ${func}.`
+      message: `Loading api module ${modPath} to call ${func}.`
     });
     let mod;
     try {
@@ -316,7 +316,7 @@ module.exports = class Router {
       mod = require(normalized);
       if (mod === undefined || mod[func] === undefined) {
         // function not found
-        const message = `No endpoint found for requested module "${modPath}", function "${func}"!`;
+        const message = `No endpoint found for requested api module "${modPath}", function "${func}"!`;
         this.logger.log({
           category: this.category,
           severity: Severity.Warning,
@@ -346,7 +346,7 @@ module.exports = class Router {
       });
       return;
     }
-    const method = this.navigateModuleMethods[context.request.method];
+    const method = this.navigateApiMethods[context.request.method];
     if (method === undefined) {
       const message = `Unable to process request method ${context.request.method}!`;
       this.logger.log({
@@ -364,14 +364,14 @@ module.exports = class Router {
     method(context, mod, func);
   }
 
-  async runModule(context, mod, func) {
+  async runApi(context, mod, func) {
     try {
       return await mod[func](context);
     } catch (e) {
       this.logger.log({
         category: this.category,
         severity: Severity.Error,
-        message: "Error executing module handler",
+        message: "Error executing api handler",
         respond: {
           error: e,
           serverContext: context,

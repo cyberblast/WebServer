@@ -31,44 +31,10 @@ const {
 function WebServer(webConfigFile = 'webserver.json', logConfigFile = 'log.json') {
   let httpServer, router;
 
-  let logger = new Logger(logConfigFile);
-  let config = new Config(webConfigFile);
+  const logger = new Logger(logConfigFile);
+  const config = new Config(webConfigFile);
 
-  async function respondError(error, serverContext, code, message) {
-    if (serverContext == null) return;
-    if (serverContext.response != null) {
-      if (serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true) {
-        logger.log({
-          category: logger.category.webserver,
-          severity: Severity.Verbose,
-          message: `Creating Error Response`
-        });
-        if (error != null) serverContext.response.setHeader('Error', error);
-        if (code != null) serverContext.response.writeHead(code);
-        if (serverContext.request.method !== 'HEAD') {
-          const status = code ? `${code} ${serverContext.response.statusMessage}` : '';
-          let errPage;
-          try {
-            errPage = await content('errorPage.html')
-          } catch (e) {
-            logger.log({
-              category: logger.category.webserver,
-              severity: Severity.Error,
-              message: `Error loading error page`,
-              data: e
-            });
-          }
-          if (errPage) {
-            const errMarkup = errPage.toString().replace('STATUS', status).replace('ERROR', message || '');
-            serverContext.response.write(errMarkup);
-          } else serverContext.response.write(`${status}<br/>${message}`);
-        }
-      }
-      if (serverContext.response.finished !== true) serverContext.response.end();
-    }
-  }
-
-  function createServer() {
+  const createServer = function() {
     return new Promise((resolve, reject) => {
       // Create Router
       try {
@@ -134,7 +100,7 @@ function WebServer(webConfigFile = 'webserver.json', logConfigFile = 'log.json')
         server = null;
       }
     });
-  }
+  }.bind(this);
 
   function process(context) {
     // set static headers
@@ -156,6 +122,7 @@ function WebServer(webConfigFile = 'webserver.json', logConfigFile = 'log.json')
         category: logger.category.webserver,
         severity: Severity.Error,
         message: `Unexpected Error`,
+        // @ts-ignore added uncommon property will trigger expected http error response via `logger.onLog(logResponse);`
         respond: {
           error: e,
           serverContext: context,
@@ -165,34 +132,6 @@ function WebServer(webConfigFile = 'webserver.json', logConfigFile = 'log.json')
         data: e
       });
     }
-  }
-
-  /**
-   * Check if a log event is also meant to create a http response error page
-   */
-  function logResponse(logEvent) {
-    if (logEvent.respond !== undefined) {
-      respondError(
-        logEvent.respond.error,
-        logEvent.respond.serverContext,
-        logEvent.respond.code,
-        logEvent.respond.message);
-    }
-  }
-
-  /**
-   * Send a standardized error to the client.  
-   * Will also be called for all internal errors.
-   * @method respondError
-   * @param {string|Error} error - Original error to send via header
-   * @param {ServerContext} context - Execution context
-   * @param {number} [code] - Http response status code  
-   * default = 500
-   * @param {string} [message] - Additional message to add to the response body, displayed on the page  
-   * default = null
-   */
-  this.respondError = async function(error, context, code = 500, message = null) {
-    await respondError(error, context, code, message);
   }
 
   /**
@@ -224,6 +163,68 @@ function WebServer(webConfigFile = 'webserver.json', logConfigFile = 'log.json')
       this.stop();
       throw e;
     }
+  }
+
+  async function respondError(error, serverContext, code, message) {
+    if (serverContext == null) return;
+    if (serverContext.response != null) {
+      if (serverContext.response.finished === false && serverContext.response.writable === true && serverContext.response.headersSent !== true) {
+        logger.log({
+          category: logger.category.webserver,
+          severity: Severity.Verbose,
+          message: `Creating Error Response`
+        });
+        if (error != null) serverContext.response.setHeader('Error', error);
+        if (code != null) serverContext.response.writeHead(code);
+        if (serverContext.request.method !== 'HEAD') {
+          const status = code ? `${code} ${serverContext.response.statusMessage}` : '';
+          let errPage;
+          try {
+            errPage = await content('errorPage.html')
+          } catch (e) {
+            logger.log({
+              category: logger.category.webserver,
+              severity: Severity.Error,
+              message: `Error loading error page`,
+              data: e
+            });
+          }
+          if (errPage) {
+            const errMarkup = errPage.toString().replace('STATUS', status).replace('ERROR', message || '');
+            serverContext.response.write(errMarkup);
+          } else serverContext.response.write(`${status}<br/>${message}`);
+        }
+      }
+      if (serverContext.response.finished !== true) serverContext.response.end();
+    }
+  }
+
+  /**
+   * Check if a log event is also meant to create a http response error page
+   */
+  function logResponse(logEvent) {
+    if (logEvent.respond !== undefined) {
+      respondError(
+        logEvent.respond.error,
+        logEvent.respond.serverContext,
+        logEvent.respond.code,
+        logEvent.respond.message);
+    }
+  }
+
+  /**
+   * Send a standardized error to the client.  
+   * Will also be called for all internal errors.
+   * @method respondError
+   * @param {string|Error} error - Original error to send via header
+   * @param {ServerContext} context - Execution context
+   * @param {number} [code] - Http response status code  
+   * default = 500
+   * @param {string} [message] - Additional message to add to the response body, displayed on the page  
+   * default = null
+   */
+  this.respondError = async function(error, context, code = 500, message = null) {
+    await respondError(error, context, code, message);
   }
 
   /**
