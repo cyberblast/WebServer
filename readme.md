@@ -80,7 +80,10 @@ Sample webserver.json file
 {
   "server": {
     "port": 80, 
-    "blobCache": true
+    "blobCache": true,
+    "headers": {
+      "Server": "cyberblast"
+    }
   },
   "router": {
     "fileRoot": "./static",
@@ -98,6 +101,7 @@ Sample webserver.json file
 ```
 * server.port: Port for the webserver to listen at
 * server.blobCache: Activate blob caching for all file routes (may be overridden on a per route base).
+* server.headers: A dictionary of static response headers to include with every response.
 * router.fileRoot: A base path for ALL file routes (optional)
 * router.apiRoot: A base path for ALL js files (except files under *modulesRoot*), callable as api function (optional)
 * router.modulesRoot: A root path for webmodule directories/packages. Such modules need to fit a certain pattern to work properly. See section *[webmodules](#webmodules)* for more details.
