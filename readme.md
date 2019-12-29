@@ -29,8 +29,6 @@ A minimal node-based web server
 Create server
 ```js
 const WebServer = require('@cyberblast/webserver');
-const server = new WebServer();
-// or with explicit config file paths, like that:
 const server = new WebServer('./config/webserver.json', './config/log.json');
 ```
 Start server
@@ -102,7 +100,7 @@ Sample webserver.json file
 * server.blobCache: Activate blob caching for all file routes (may be overridden on a per route base).
 * router.fileRoot: A base path for ALL file routes (optional)
 * router.apiRoot: A base path for ALL js files (except files under *modulesRoot*), callable as api function (optional)
-* router.modulesRoot: A root path for webmodule directories/packages. Such modules need to fit a certain pattern to work properly. See section *webmodules* for more details.
+* router.modulesRoot: A root path for webmodule directories/packages. Such modules need to fit a certain pattern to work properly. See section *[webmodules](#webmodules)* for more details.
 * router.routes: List of route rules. First path match will get executed (top to bottom).
 * router.routes[x].path: URL path. Request url path must match to activate route rule. Filehandler rules may contain an asterisk (*) at the end to specify catch all rules. Apihandler rules may define token placeholders for module (:module) and function (:function). 
 * router.routes[x].handler: "file" or "api". 
