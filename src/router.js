@@ -1,12 +1,9 @@
 const url = require('url');
 const path = require('path');
+const fs = require("fs");
+const { Logger, Severity } = require('@cyberblast/logger');
 const BlobLoader = require('./BlobLoader');
-const {
-  contentTypeByExtension
-} = require('./contentType');
-const {
-  severity
-} = require('@cyberblast/logger');
+const { contentTypeByExtension } = require('./contentType');
 
 const default404Message = 'Ooops! The file you requested was not found on the server!';
 
@@ -70,7 +67,18 @@ const match = {
   }
 }
 
+const getDirectories = source => {
+  return fs.readdirSync(source, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name);
+}
+
 module.exports = class Router {
+  /**
+   * Instanciate a new Router
+   * @param {any} settings 
+   * @param {Logger} logger 
+   */
   constructor(settings, logger) {
     this.logger = logger;
     this.category = logger.category.webserver;
@@ -79,32 +87,68 @@ module.exports = class Router {
     this.fileRoot = settings.router.fileRoot || '';
     this.apiRoot = settings.router.apiRoot || '';
     this.blobCache = settings.server.blobCache || false;
-    this.allowedModuleMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
+    this.allowedApiMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
     this.allowedFileMethods = ['GET', 'HEAD', 'POST', 'OPTIONS'];
     const self = this;
 
+    if (settings.router.modulesRoot !== undefined) {
+      const modules = getDirectories(settings.router.modulesRoot);
+      if (settings.router.webmodule === undefined) {
+        settings.router.webmodule = {};
+      }
+      modules.forEach(mod => {
+        if (settings.router.webmodule[mod] === undefined) {
+          settings.router.webmodule[mod] = `${settings.router.modulesRoot}/${mod}`;
+        }
+      });
+    }
+
+    if (settings.router.webmodule !== undefined) {
+      Object.keys(settings.router.webmodule).forEach(name => {
+        const path = settings.router.webmodule[name];
+        this.routes.unshift({
+          handler: 'api',
+          path: `/$api/${name}/:function`,
+          module: path + '/api.js',
+          absolut: true
+        });
+        this.routes.unshift({
+          handler: 'file',
+          path: '/$component/' + name + '/*',
+          content: path + '/*',
+          absolut: true
+        });
+        this.routes.unshift({
+          handler: 'file',
+          path: '/$component/' + name,
+          content: path + '/component.mjs',
+          absolut: true
+        });
+      });
+    }
+
     this.handler = {
-      "file": async (context) => {
-        const filePath = self.fileRoot + context.route.content;
+      'file': async (context) => {
+        const filePath = (context.route.absolut === true ? '' : self.fileRoot) + context.route.content;
         const useBlobCache = context.route.blobCache === true || self.blobCache;
         await self.navigateFile(context, filePath, useBlobCache);
       },
-      "module": async (context) => {
-        const mod = self.apiRoot + '/' + context.route.module;
-        self.navigateModule(context, mod, context.route.function);
+      'api': async (context) => {
+        const mod = (context.route.absolut === true ? '' : (self.apiRoot + '/')) + context.route.module;
+        self.navigateApi(context, mod, context.route.function);
       }
     };
 
-    this.navigateModuleMethods = {
+    this.navigateApiMethods = {
       GET: (context, mod, func) => {
-        self.runModule(context, mod, func).then(content => {
+        self.runApi(context, mod, func).then(content => {
           if (content != null && context.response.finished === false) context.response.write(content);
           context.response.end();
         });
       },
       HEAD: (context, mod, func) => {
         // dont set body content
-        self.runModule(context, mod, func).then(() => context.response.end());
+        self.runApi(context, mod, func).then(() => context.response.end());
       },
       POST: (context, mod, func) => {
         let rawData;
@@ -118,7 +162,7 @@ module.exports = class Router {
             const message = `Request data length exceeds ${1e6} bytes. Request connection terminated.`;
             this.logger.log({
               category: this.category,
-              severity: severity.Warning,
+              severity: Severity.Warning,
               message
             });
             context.response.setHeader('Error', message);
@@ -129,20 +173,24 @@ module.exports = class Router {
         });
         context.request.on('end', function() {
           context.data = rawData;
-          self.runModule(context, mod, func).then(content => {
+          self.runApi(context, mod, func).then(content => {
             if (content != null && context.response.finished === false) context.response.write(content);
             context.response.end();
           });
         });
       },
       OPTIONS: (context) => {
-        self.processOptions(context, this.allowedModuleMethods);
+        self.processOptions(context, this.allowedApiMethods);
       }
     };
 
     this.routes.forEach(qualifyRoute);
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   */
   async navigate(context) {
     const requestPath = url.parse(context.request.url).pathname;
     context.client = context.request.socket.remoteAddress.split(':').pop();
@@ -151,8 +199,9 @@ module.exports = class Router {
     if (context.route === undefined) {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
+        severity: Severity.Error,
         message: `No route found for path "${requestPath}"!`,
+        // @ts-ignore
         respond: {
           error: `No route found for path "${requestPath}"!`,
           serverContext: context,
@@ -169,8 +218,9 @@ module.exports = class Router {
     } else {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
+        severity: Severity.Error,
         message: `Unknown route handler "${context.route.handler}"`,
+        // @ts-ignore
         respond: {
           error: `Unknown route handler "${context.route.handler}"`,
           serverContext: context,
@@ -193,17 +243,24 @@ module.exports = class Router {
     if (route !== undefined) return Object.assign({}, route, matchResult.tokens);
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {string} filePath 
+   * @param {boolean} useBlobCache 
+   */
   async navigateFile(context, filePath, useBlobCache) {
     this.logger.log({
       category: this.category,
-      severity: severity.Verbose,
+      severity: Severity.Verbose,
       message: `Navigating to File '${filePath}'.`
     });
     if (!filePath) {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
+        severity: Severity.Error,
         message: 'Unable to handle empty path request!',
+        // @ts-ignore
         respond: {
           error: 'Unable to handle empty path request!',
           serverContext: context,
@@ -225,7 +282,7 @@ module.exports = class Router {
         context.response.end();
         this.logger.log({
           category: this.category,
-          severity: severity.Verbose,
+          severity: Severity.Verbose,
           message: `File response '${filePath}' completed.`
         });
       }
@@ -233,8 +290,9 @@ module.exports = class Router {
         // classic 404
         this.logger.log({
           category: this.category,
-          severity: severity.Warning,
+          severity: Severity.Warning,
           message: `Error loading file '${filePath}'.`,
+          // @ts-ignore
           respond: {
             error: e,
             serverContext: context,
@@ -247,11 +305,12 @@ module.exports = class Router {
       }
     } else {
       // method not allowed for static file requests
-      const err = `Request method ${context.method.request} is not allowed for that request path`;
+      const err = `Request method ${context.request.method} is not allowed for that request path`;
       this.logger.log({
         category: this.category,
-        severity: severity.Warning,
+        severity: Severity.Warning,
         message: err,
+        // @ts-ignore
         respond: {
           error: err,
           serverContext: context,
@@ -261,11 +320,17 @@ module.exports = class Router {
     }
   }
 
-  navigateModule(context, modPath, func) {
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {string} modPath 
+   * @param {string} func 
+   */
+  navigateApi(context, modPath, func) {
     this.logger.log({
       category: this.category,
-      severity: severity.Verbose,
-      message: `Loading module ${modPath} to call ${func}.`
+      severity: Severity.Verbose,
+      message: `Loading api module ${modPath} to call ${func}.`
     });
     let mod;
     try {
@@ -273,11 +338,12 @@ module.exports = class Router {
       mod = require(normalized);
       if (mod === undefined || mod[func] === undefined) {
         // function not found
-        const message = `No endpoint found for requested module "${modPath}", function "${func}"!`;
+        const message = `No endpoint found for requested api module "${modPath}", function "${func}"!`;
         this.logger.log({
           category: this.category,
-          severity: severity.Warning,
+          severity: Severity.Warning,
           message: message,
+          // @ts-ignore
           respond: {
             error: message,
             serverContext: context,
@@ -291,8 +357,9 @@ module.exports = class Router {
       // module not found
       this.logger.log({
         category: this.category,
-        severity: severity.Warning,
+        severity: Severity.Warning,
         message: `Module '${modPath}' not found.`,
+        // @ts-ignore
         respond: {
           error: e,
           serverContext: context,
@@ -303,13 +370,14 @@ module.exports = class Router {
       });
       return;
     }
-    const method = this.navigateModuleMethods[context.request.method];
+    const method = this.navigateApiMethods[context.request.method];
     if (method === undefined) {
       const message = `Unable to process request method ${context.request.method}!`;
       this.logger.log({
         category: this.category,
-        severity: severity.Warning,
+        severity: Severity.Warning,
         message: message,
+        // @ts-ignore
         respond: {
           error: message,
           serverContext: context,
@@ -321,15 +389,21 @@ module.exports = class Router {
     method(context, mod, func);
   }
 
-  async runModule(context, mod, func) {
-    let content = null;
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {any} mod 
+   * @param {string} func 
+   */
+  async runApi(context, mod, func) {
     try {
-      content = mod[func](context);
+      return await mod[func](context);
     } catch (e) {
       this.logger.log({
         category: this.category,
-        severity: severity.Error,
-        message: "Error executing module handler",
+        severity: Severity.Error,
+        message: "Error executing api handler",
+        // @ts-ignore
         respond: {
           error: e,
           serverContext: context,
@@ -338,36 +412,20 @@ module.exports = class Router {
         data: e
       });
     }
-
-    if (typeof content == 'string')
-      return content;
-    else {
-      try {
-        await content;
-      } catch (e) {
-        this.logger.log({
-          category: this.category,
-          severity: severity.Error,
-          message: "Error executing module handler",
-          respond: {
-            error: e,
-            serverContext: context,
-            code: 500
-          },
-          data: e
-        });
-      }
-      return content;
-    }
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {string[]} allowedMethods 
+   */
   processOptions(context, allowedMethods) {
     this.logger.log({
       category: this.category,
-      severity: severity.Verbose,
+      severity: Severity.Verbose,
       message: 'Creating OPTION response.',
     });
-    const acrm = context.request.getHeader('access-control-request-method');
+    const acrm = context.request.headers['access-control-request-method'];
     const acrh = context.request.headers['access-control-request-headers'];
     const origin = context.request.headers['origin'];
     if (acrm === undefined && acrh === undefined && origin === undefined) {

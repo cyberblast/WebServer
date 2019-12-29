@@ -1,6 +1,6 @@
 {
   "name": "@cyberblast/webserver",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "A minimal node-based web server",
   "author": "cyberblast <git@cyberblast.org>",
   "license": "MIT",
@@ -30,9 +30,7 @@
     "node": "*"
   },
   "dependencies": {
-    "@cyberblast/config": "0.0.5",
-    "@cyberblast/logger": "0.0.7"
-  },
-  "devDependencies": {},
-  "optionalDependencies": {}
+    "@cyberblast/config": "^0.0.9",
+    "@cyberblast/logger": "^0.0.9"
+  }
 }

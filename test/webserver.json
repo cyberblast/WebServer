@@ -18,13 +18,13 @@
       },
       {
         "path": "/api/server/ip",
-        "handler": "module",
+        "handler": "api",
         "module": "server.js",
         "function": "ip"
       },
       {
         "path": "/api/:module/:function",
-        "handler": "module"
+        "handler": "api"
       },
       {
         "path": "/other/*",
