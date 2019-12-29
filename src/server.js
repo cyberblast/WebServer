@@ -1,4 +1,4 @@
-module.exports = WebServer;
+module.exports = { WebServer };
 
 const http = require('http');
 const Config = require('@cyberblast/config');

@@ -1,4 +1,4 @@
-const WebServer = require('../src/server');
+const { WebServer } = require('../src/server');
 let server;
 
 function sleep(ms) {

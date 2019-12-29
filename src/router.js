@@ -1,13 +1,9 @@
 const url = require('url');
 const path = require('path');
 const fs = require("fs");
+const { Logger, Severity } = require('@cyberblast/logger');
 const BlobLoader = require('./BlobLoader');
-const {
-  contentTypeByExtension
-} = require('./contentType');
-const {
-  Severity
-} = require('@cyberblast/logger');
+const { contentTypeByExtension } = require('./contentType');
 
 const default404Message = 'Ooops! The file you requested was not found on the server!';
 
@@ -78,6 +74,11 @@ const getDirectories = source => {
 }
 
 module.exports = class Router {
+  /**
+   * Instanciate a new Router
+   * @param {any} settings 
+   * @param {Logger} logger 
+   */
   constructor(settings, logger) {
     this.logger = logger;
     this.category = logger.category.webserver;
@@ -186,6 +187,10 @@ module.exports = class Router {
     this.routes.forEach(qualifyRoute);
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   */
   async navigate(context) {
     const requestPath = url.parse(context.request.url).pathname;
     context.client = context.request.socket.remoteAddress.split(':').pop();
@@ -196,6 +201,7 @@ module.exports = class Router {
         category: this.category,
         severity: Severity.Error,
         message: `No route found for path "${requestPath}"!`,
+        // @ts-ignore
         respond: {
           error: `No route found for path "${requestPath}"!`,
           serverContext: context,
@@ -214,6 +220,7 @@ module.exports = class Router {
         category: this.category,
         severity: Severity.Error,
         message: `Unknown route handler "${context.route.handler}"`,
+        // @ts-ignore
         respond: {
           error: `Unknown route handler "${context.route.handler}"`,
           serverContext: context,
@@ -236,6 +243,12 @@ module.exports = class Router {
     if (route !== undefined) return Object.assign({}, route, matchResult.tokens);
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {string} filePath 
+   * @param {boolean} useBlobCache 
+   */
   async navigateFile(context, filePath, useBlobCache) {
     this.logger.log({
       category: this.category,
@@ -247,6 +260,7 @@ module.exports = class Router {
         category: this.category,
         severity: Severity.Error,
         message: 'Unable to handle empty path request!',
+        // @ts-ignore
         respond: {
           error: 'Unable to handle empty path request!',
           serverContext: context,
@@ -278,6 +292,7 @@ module.exports = class Router {
           category: this.category,
           severity: Severity.Warning,
           message: `Error loading file '${filePath}'.`,
+          // @ts-ignore
           respond: {
             error: e,
             serverContext: context,
@@ -295,6 +310,7 @@ module.exports = class Router {
         category: this.category,
         severity: Severity.Warning,
         message: err,
+        // @ts-ignore
         respond: {
           error: err,
           serverContext: context,
@@ -304,6 +320,12 @@ module.exports = class Router {
     }
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {string} modPath 
+   * @param {string} func 
+   */
   navigateApi(context, modPath, func) {
     this.logger.log({
       category: this.category,
@@ -321,6 +343,7 @@ module.exports = class Router {
           category: this.category,
           severity: Severity.Warning,
           message: message,
+          // @ts-ignore
           respond: {
             error: message,
             serverContext: context,
@@ -336,6 +359,7 @@ module.exports = class Router {
         category: this.category,
         severity: Severity.Warning,
         message: `Module '${modPath}' not found.`,
+        // @ts-ignore
         respond: {
           error: e,
           serverContext: context,
@@ -353,6 +377,7 @@ module.exports = class Router {
         category: this.category,
         severity: Severity.Warning,
         message: message,
+        // @ts-ignore
         respond: {
           error: message,
           serverContext: context,
@@ -364,6 +389,12 @@ module.exports = class Router {
     method(context, mod, func);
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {any} mod 
+   * @param {string} func 
+   */
   async runApi(context, mod, func) {
     try {
       return await mod[func](context);
@@ -372,6 +403,7 @@ module.exports = class Router {
         category: this.category,
         severity: Severity.Error,
         message: "Error executing api handler",
+        // @ts-ignore
         respond: {
           error: e,
           serverContext: context,
@@ -382,13 +414,18 @@ module.exports = class Router {
     }
   }
 
+  /**
+   * 
+   * @param {import('./server').ServerContext} context 
+   * @param {string[]} allowedMethods 
+   */
   processOptions(context, allowedMethods) {
     this.logger.log({
       category: this.category,
       severity: Severity.Verbose,
       message: 'Creating OPTION response.',
     });
-    const acrm = context.request.getHeader('access-control-request-method');
+    const acrm = context.request.headers['access-control-request-method'];
     const acrh = context.request.headers['access-control-request-headers'];
     const origin = context.request.headers['origin'];
     if (acrm === undefined && acrh === undefined && origin === undefined) {
