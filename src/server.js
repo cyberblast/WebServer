@@ -16,7 +16,7 @@ const {
  * @property {http.ServerResponse} response
  * @property {Logger} logger
  * @property {string} client
- * @property {any} route - route node from config file
+ * @property { Object.<string, any> } route - route node from config file
  * @property {string | Buffer} data - request post body
  */
 
