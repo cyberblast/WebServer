@@ -305,7 +305,7 @@ module.exports = class Router {
       }
     } else {
       // method not allowed for static file requests
-      const err = `Request method ${context.method.request} is not allowed for that request path`;
+      const err = `Request method ${context.request.method} is not allowed for that request path`;
       this.logger.log({
         category: this.category,
         severity: Severity.Warning,
