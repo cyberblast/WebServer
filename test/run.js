@@ -22,7 +22,6 @@ async function validate() {
     * Call api handlers
     * validate results
     * log results
-    * (present results on a page)
   */
 }
 

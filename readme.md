@@ -28,22 +28,29 @@ A minimal node-based web server
 
 Create server
 ```js
-const server = require('@cyberblast/webserver');
+const WebServer = require('@cyberblast/webserver');
+const server = new WebServer();
+// or with explicit config file paths, like that:
+const server = new WebServer('./config/webserver.json', './config/log.json');
 ```
 Start server
 ```js
-server.start();
-// or with explicit config file paths, like that:
-server.start('./config/webserver.json', './config/log.json');
+await server.start();
+// or without async:
+server.start().then(() => {
+  // up and running...
+});
 ```
-Route requests to custom js handlers
+Route requests to custom js handlers (see configuration section for routing details)
 ```js
+// this is a sample custom js handler:
 static greetIp(serverContext){
   return 'Hello ' + serverContext.request.socket.remoteAddress.split(':').pop();
 }
 ```
 Respond with a standardized error page
 ```js
+// another a sample custom js handler:
 static alwaysBroken(serverContext){
   serverContext.server.respondError(
     'Explicit developer error message', 
@@ -63,9 +70,9 @@ More examples can be found in the './test' directory of the repository.
 
 Create a config file named `webserver.json` at your project root directory. 
 
-Alternatively, you can create a json config file anywhere and specify its path/name when starting the server: `server.start('./src/server/config.json')`
+Alternatively, you can create a json config file anywhere and specify its path/name when constructing the server: `new WebServer('./src/server/config.json')`
 
-You can also specify logging settings in a separate log config file, by default expected to be at your project root directory at `log.json`, or specify a different path as a second parameter for server.start like that: `server.start('./config/webserver.json', './config/log.json');`.  
+You can also specify logging settings in a separate log config file, by default expected to be at your project root directory at `log.json`, or specify a different path as a second parameter for WebServer construction like that: `new WebServer('./config/webserver.json', './config/log.json');`.  
 More details about the logger can be found in [a separate repository](https://github.com/cyberblast/logger).
 
 ### Configuration Settings
