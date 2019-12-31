@@ -4,6 +4,7 @@ A minimal node-based web server
 
 [![Build Status](https://travis-ci.com/cyberblast/WebServer.svg?branch=dev)](https://travis-ci.com/cyberblast/webserver)
 [![npm version](https://badge.fury.io/js/%40cyberblast%2Fwebserver.svg)](https://badge.fury.io/js/%40cyberblast%2Fwebserver)
+[![TypeScript definitions on DefinitelyTyped](https://definitelytyped.org/badges/standard-flat.svg)](https://www.npmjs.com/package/@types/cyberblast__webserver)
 
 ## Implemented Features
 
